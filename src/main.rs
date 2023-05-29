@@ -4,7 +4,7 @@ mod utils;
 use parser::lexer::Lexer;
 
 #[allow(unused_imports)]
-use crate::parser::token::{EnumTokenType, TokenTrait, TokenDouble, TokenSymbol};
+use crate::parser::token::{EnumTokenType, TokenTrait, TokenBool, TokenDouble, TokenSymbol};
 
 #[macro_use]
 extern crate downcast_rs;
@@ -28,6 +28,11 @@ fn main()
 
                 match the_token.get_type()
                 {
+                    EnumTokenType::BOOL =>
+                    {
+                        let token_bool = the_token.downcast_ref::<TokenBool>().unwrap();
+                        println!("token_bool: {0}", token_bool.get_value());
+                    },
                     EnumTokenType::DOUBLE =>
                     {
                         let token_double = the_token.downcast_ref::<TokenDouble>().unwrap();

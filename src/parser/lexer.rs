@@ -1,5 +1,5 @@
 #[allow(unused_imports)]
-use crate::parser::token::{TokenTrait, TokenDouble, TokenSymbol};
+use crate::parser::token::{TokenTrait, TokenBool, TokenDouble, TokenSymbol};
 use crate::utils::string_utils::StringBuilder;
 
 use std::collections::hash_map::HashMap;
@@ -239,6 +239,18 @@ fn handle_symbol(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
 
     let output = inst.buffer.to_string();
     // println!("debug output: {0}, {1}", output, output.len());
+
+    // Check to see if this symbol was true or false, thus making it a TokenBool.
+    if output == "true"
+    {
+        return Ok(Rc::new(TokenBool::new(true)));
+    }
+
+    else if output == "false"
+    {
+        return Ok(Rc::new(TokenBool::new(false)));
+    }
+
     return Ok(Rc::new(TokenSymbol::new(output)));
 }
 
