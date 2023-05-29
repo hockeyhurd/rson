@@ -4,7 +4,10 @@ mod utils;
 use parser::lexer::Lexer;
 
 #[allow(unused_imports)]
-use crate::parser::token::{EnumTokenType, TokenTrait, TokenBool, TokenDouble, TokenSymbol};
+use crate::parser::token::{EnumTokenType, TokenTrait};
+use crate::parser::token_bool::TokenBool;
+use crate::parser::token_double::TokenDouble;
+use crate::parser::token_symbol::TokenSymbol;
 
 #[macro_use]
 extern crate downcast_rs;

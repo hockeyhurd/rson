@@ -1,5 +1,8 @@
 #[allow(unused_imports)]
-use crate::parser::token::{TokenTrait, TokenBool, TokenDouble, TokenSymbol};
+use crate::parser::token::{EnumTokenType, TokenTrait};
+use crate::parser::token_bool::TokenBool;
+use crate::parser::token_double::TokenDouble;
+use crate::parser::token_symbol::TokenSymbol;
 use crate::utils::string_utils::StringBuilder;
 
 use std::collections::hash_map::HashMap;
