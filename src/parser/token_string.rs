@@ -119,7 +119,7 @@ mod tests
     {
         let mut in_value = String::from("\"Hello, world!\"");
         let mut token = TokenString::new(in_value.clone());
-        assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+        assert_eq!(token.get_type(), EnumTokenType::STRING);
         assert_eq!(token.get_value(), &in_value);
 
         in_value += " \"Hello, again, world!\"";
