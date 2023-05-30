@@ -2,6 +2,7 @@
 use crate::parser::token::{EnumTokenType, TokenTrait};
 use crate::parser::token_bool::TokenBool;
 use crate::parser::token_double::TokenDouble;
+use crate::parser::token_string::TokenString;
 use crate::parser::token_symbol::TokenSymbol;
 use crate::utils::string_utils::StringBuilder;
 
@@ -28,7 +29,9 @@ impl Lexer
 
     fn init_table(&mut self)
     {
+        self.lookup_table.insert('\\', handle_leading_escape);
         self.lookup_table.insert('.', handle_number);
+        self.lookup_table.insert('"', handle_string);
         self.lookup_table.insert('{', handle_symbol);
         self.lookup_table.insert('}', handle_symbol);
 
@@ -157,6 +160,30 @@ impl Lexer
     }
 }
 
+fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
+{
+    let lookahead_opt = inst.next_char();
+
+    match lookahead_opt
+    {
+        Some(lookahead) =>
+        {
+            let func_opt = inst.lookup_table.get(&lookahead);
+
+            match func_opt
+            {
+                Some(func) =>
+                {
+                    inst.buffer.append_char(lookahead);
+                    return func(inst, lookahead);
+                },
+                None => { return Err(String::from("Error: Failed to lookup an appropriate handler function")); },
+            }
+        },
+        None => { return Err(String::from("Error: failed lookahead")); },
+    }
+}
+
 fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
     inst.buffer.append_char(ch);
@@ -206,6 +233,76 @@ fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
 
     let num = output.parse::<f64>().expect("Failed to parse output");
     return Ok(Rc::new(TokenDouble::new(num)));
+}
+
+fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
+{
+    // We don't add it to the buffer because we want to remove it and just get
+    // the raw value.
+    // inst.buffer.append_char(ch);
+    let mut last_was_escape = false;
+    let mut saw_close_quote = false;
+
+    loop
+    {
+        let cur_char_opt = inst.next_char();
+
+        match cur_char_opt
+        {
+            Some(cur_char) =>
+            {
+                // Handle escapes
+                if cur_char == '\\'
+                {
+                    if last_was_escape
+                    {
+                        inst.buffer.append_char(cur_char);
+                        last_was_escape = false;
+                    }
+
+                    else
+                    {
+                        last_was_escape = true;
+                    }
+                }
+
+                else if cur_char == '"'
+                {
+                    // This marks the end of the string.
+                    if !last_was_escape
+                    {
+                        saw_close_quote = true;
+                        break;
+                    }
+
+                    last_was_escape = false;
+                    inst.buffer.append_char(cur_char);
+                }
+
+                // Normal char
+                else
+                {
+                    inst.buffer.append_char(cur_char);
+                }
+            },
+            None => { /*println!("Logic error in handle_string while getting the next char");*/ break; },
+        }
+    }
+
+    if inst.buffer.empty()
+    {
+        return Err(String::from("Logic error in handling string"));
+    }
+
+    else if !saw_close_quote
+    {
+        return Err(String::from("Error: Missing closing double-quote ('\"')."));
+    }
+
+    let output = inst.buffer.to_string();
+    // println!("debug output: {0}, {1}", output, output.len());
+
+    return Ok(Rc::new(TokenString::new(output)));
 }
 
 fn handle_symbol(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>

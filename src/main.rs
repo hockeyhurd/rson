@@ -7,6 +7,7 @@ use parser::lexer::Lexer;
 use crate::parser::token::{EnumTokenType, TokenTrait};
 use crate::parser::token_bool::TokenBool;
 use crate::parser::token_double::TokenDouble;
+use crate::parser::token_string::TokenString;
 use crate::parser::token_symbol::TokenSymbol;
 
 #[macro_use]
@@ -14,7 +15,10 @@ extern crate downcast_rs;
 
 fn main()
 {
-    let input = String::from("{ true .123 }");
+    // let input = String::from("{ true .123 \\\"Hello, world!\\\" }");
+    // let input = String::from("{ \\\"Hi\\\" }"); // Incorrect
+    let input = String::from("{ \"\\\"Hi\\\"\" }"); // Correct
+    // let input = String::from("{ \"Hi\" }"); // Correct
     let mut lexer = Lexer::new(&input);
 
     loop
@@ -40,6 +44,11 @@ fn main()
                     {
                         let token_double = the_token.downcast_ref::<TokenDouble>().unwrap();
                         println!("token_double: {0}", token_double.get_value());
+                    },
+                    EnumTokenType::STRING =>
+                    {
+                        let token_string = the_token.downcast_ref::<TokenString>().unwrap();
+                        println!("token_string: {0}", token_string.get_value());
                     },
                     EnumTokenType::SYMBOL =>
                     {
