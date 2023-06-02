@@ -62,11 +62,6 @@ impl TokenTrait for TokenSymbol
         return Err("TokenSymbol is not a TokenDouble".to_string());
     }
 
-    fn as_object(&self) -> Result<Rc<dyn TokenTrait>, String>
-    {
-        return Err("TokenSymbol is not a TokenObject".to_string());
-    }
-
     fn as_string(&self) -> Result<&String, String>
     {
         return Err("TokenSymbol is not a TokenString".to_string());
@@ -92,7 +87,7 @@ impl TokenTrait for TokenSymbol
         true
     }
 
-    fn is_object(&self) -> bool
+    fn is_null(&self) -> bool
     {
         false
     }
