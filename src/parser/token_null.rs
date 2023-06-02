@@ -23,6 +23,11 @@ impl TokenTrait for TokenNull
         return Err("TokenNull is not a TokenBool".to_string());
     }
 
+    fn as_char(&self) -> Result<char, String>
+    {
+        return Err("TokenNull is not a TokenChar".to_string());
+    }
+
     fn as_double(&self) -> Result<f64, String>
     {
         return Err("TokenNull is not a TokenDouble".to_string());
@@ -39,6 +44,11 @@ impl TokenTrait for TokenNull
     }
 
     fn is_bool(&self) -> bool
+    {
+        false
+    }
+
+    fn is_char(&self) -> bool
     {
         false
     }

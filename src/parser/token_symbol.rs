@@ -50,6 +50,11 @@ impl TokenTrait for TokenSymbol
         return Err("TokenSymbol is not a TokenBool".to_string());
     }
 
+    fn as_char(&self) -> Result<char, String>
+    {
+        return Err("TokenSymbol is not a TokenChar".to_string());
+    }
+
     fn as_double(&self) -> Result<f64, String>
     {
         return Err("TokenSymbol is not a TokenDouble".to_string());
@@ -66,6 +71,11 @@ impl TokenTrait for TokenSymbol
     }
 
     fn is_bool(&self) -> bool
+    {
+        false
+    }
+
+    fn is_char(&self) -> bool
     {
         false
     }

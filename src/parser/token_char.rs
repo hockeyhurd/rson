@@ -1,61 +1,61 @@
 use crate::parser::token::{EnumTokenType, TokenTrait};
 
-pub struct TokenBool
+pub struct TokenChar
 {
-    value: bool,
+    value: char,
 }
 
-impl TokenBool
+impl TokenChar
 {
     #[allow(dead_code)]
-    pub fn new(value: bool) -> Self
+    pub fn new(value: char) -> Self
     {
         Self { value }
     }
 
     #[allow(dead_code)]
-    pub fn get_value(&self) -> bool
+    pub fn get_value(&self) -> char
     {
         return self.value.into();
     }
 
     #[allow(dead_code)]
-    pub fn set_value(&mut self, value: bool)
+    pub fn set_value(&mut self, value: char)
     {
         self.value = value.into();
     }
 }
 
-impl TokenTrait for TokenBool
+impl TokenTrait for TokenChar
 {
     fn get_type(&self) -> EnumTokenType
     {
-        return EnumTokenType::BOOL;
+        return EnumTokenType::CHAR;
     }
 
     fn as_bool(&self) -> Result<bool, String>
     {
-        return Ok(self.value);
+        return Err("TokenChar is not a TokenBool".to_string());
     }
 
     fn as_char(&self) -> Result<char, String>
     {
-        return Err("TokenBool is not a TokenChar".to_string());
+        return Ok(self.value);
     }
 
     fn as_double(&self) -> Result<f64, String>
     {
-        return Err("TokenBool is not a TokenDouble".to_string());
+        return Err("TokenChar is not a TokenDouble".to_string());
     }
 
     fn as_string(&self) -> Result<&String, String>
     {
-        return Err("TokenBool is not a TokenString".to_string());
+        return Err("TokenChar is not a TokenString".to_string());
     }
 
     fn as_symbol(&self) -> Result<&String, String>
     {
-        return Err("TokenBool is not a TokenSymbol".to_string());
+        return Err("TokenChar is not a TokenSymbol".to_string());
     }
 
     fn is_bool(&self) -> bool
@@ -93,19 +93,20 @@ impl TokenTrait for TokenBool
 mod tests
 {
     use crate::parser::token::{EnumTokenType, TokenTrait};
-    use crate::parser::token_bool::TokenBool;
+    use crate::parser::token_char::TokenChar;
 
     #[test]
-    fn create_token_bool()
+    fn create_token_char()
     {
-        let mut in_value = true;
-        let mut token = TokenBool::new(in_value);
-        assert_eq!(token.get_type(), EnumTokenType::BOOL);
+        let mut in_value = 'a';
+        let mut token = TokenChar::new(in_value);
+        assert_eq!(token.get_type(), EnumTokenType::CHAR);
         assert_eq!(token.get_value(), in_value);
 
-        in_value = false;
+        in_value = 'A';
         token.set_value(in_value);
         assert_eq!(token.get_value(), in_value);
     }
 }
+
 
