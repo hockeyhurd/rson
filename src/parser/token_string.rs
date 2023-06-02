@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::parser::token::{EnumTokenType, TokenTrait};
 
 pub struct TokenString
@@ -47,11 +45,6 @@ impl TokenTrait for TokenString
         return EnumTokenType::STRING;
     }
 
-    fn as_array(&self) -> Result<Vec<Rc<dyn TokenTrait>>, String>
-    {
-        return Err("TokenString is not a TokenArray".to_string());
-    }
-
     fn as_bool(&self) -> Result<bool, String>
     {
         return Err("TokenString is not a TokenBool".to_string());
@@ -70,11 +63,6 @@ impl TokenTrait for TokenString
     fn as_symbol(&self) -> Result<&String, String>
     {
         return Err("TokenString is not a TokenSymbol".to_string());
-    }
-
-    fn is_array(&self) -> bool
-    {
-        false
     }
 
     fn is_bool(&self) -> bool
