@@ -34,6 +34,8 @@ impl Lexer
         self.lookup_table.insert('\\', handle_leading_escape);
         self.lookup_table.insert('.', handle_number);
         self.lookup_table.insert('"', handle_string);
+        self.lookup_table.insert(',', handle_symbol);
+        self.lookup_table.insert(':', handle_symbol);
         self.lookup_table.insert('{', handle_symbol);
         self.lookup_table.insert('}', handle_symbol);
 
@@ -369,6 +371,44 @@ mod tests
     use crate::parser::lexer::Lexer;
 
     #[test]
+    fn lex_accepts_empty_input()
+    {
+        let input = String::from("");
+        let mut lexer = Lexer::new(&input);
+
+        let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_accepts_curly_brackets()
+    {
+        let input = String::from(" { } ");
+        let first_token = String::from("{");
+        let second_token = String::from("}");
+        let mut lexer = Lexer::new(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &second_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
     fn lex_token_bool_true()
     {
         let first_token = String::from("{");
@@ -517,6 +557,166 @@ mod tests
             assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
             assert!(token.is_symbol());
             assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_simple_key_value_pair()
+    {
+        let first_token = String::from("{");
+        let second_token = String::from("key");
+        let third_token = String::from(":");
+        let fourth_token = String::from("value");
+        let fifth_token = String::from("}");
+        let input = String::from("{ \"key\": \"value\" }");
+        let mut lexer = Lexer::new(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), &second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), &fourth_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &fifth_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_multi_field_object()
+    {
+        let first_token = String::from("{");
+        let second_token = String::from("1");
+        let third_token = String::from(":");
+        let fourth_token: f64 = 123.0;
+        let fifth_token = String::from(",");
+        let sixth_token = String::from("2");
+        let seventh_token = &third_token;
+        let eighth_token: f64 = 456.0;
+        let ninth_token = String::from("}");
+        let input = String::from("{ \"1\": 123, \"2\": 456 }");
+        let mut lexer = Lexer::new(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), &second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), fourth_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &fifth_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), &sixth_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), seventh_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), eighth_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &ninth_token);
         }
 
         token_result = lexer.next_token();
