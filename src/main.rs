@@ -45,6 +45,10 @@ fn main()
                         let token_double = the_token.downcast_ref::<TokenDouble>().unwrap();
                         println!("token_double: {0}", token_double.get_value());
                     },
+                    EnumTokenType::NULL =>
+                    {
+                        println!("token_null: null");
+                    },
                     EnumTokenType::STRING =>
                     {
                         let token_string = the_token.downcast_ref::<TokenString>().unwrap();
