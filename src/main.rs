@@ -19,7 +19,7 @@ fn main()
     // let input = String::from("{ \\\"Hi\\\" }"); // Incorrect
     let input = String::from("{ \"\\\"Hi\\\"\" }"); // Correct
     // let input = String::from("{ \"Hi\" }"); // Correct
-    let mut lexer = Lexer::new(&input);
+    let mut lexer = Lexer::new_copy(&input);
 
     loop
     {

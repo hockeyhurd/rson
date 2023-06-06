@@ -21,9 +21,17 @@ pub struct Lexer
 
 impl Lexer
 {
-    pub fn new(input: &String) -> Self
+    pub fn new_copy(input: &String) -> Self
     {
         let mut result = Self { input: input.clone(), index: 0, lookup_table: HashMap::new(), buffer: StringBuilder::new(4096) };
+        result.init_table();
+
+        return result;
+    }
+
+    pub fn new_move(input: String) -> Self
+    {
+        let mut result = Self { input: input, index: 0, lookup_table: HashMap::new(), buffer: StringBuilder::new(4096) };
         result.init_table();
 
         return result;
@@ -374,7 +382,7 @@ mod tests
     fn lex_accepts_empty_input()
     {
         let input = String::from("");
-        let mut lexer = Lexer::new(&input);
+        let mut lexer = Lexer::new_copy(&input);
 
         let token_result = lexer.next_token();
         assert!(token_result.is_err());
@@ -386,7 +394,7 @@ mod tests
         let input = String::from(" { } ");
         let first_token = String::from("{");
         let second_token = String::from("}");
-        let mut lexer = Lexer::new(&input);
+        let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
 
@@ -415,7 +423,7 @@ mod tests
         let second_token = true;
         let third_token = String::from("}");
         let input = String::from("{ true }");
-        let mut lexer = Lexer::new(&input);
+        let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
 
@@ -455,7 +463,7 @@ mod tests
         let second_token = false;
         let third_token = String::from("}");
         let input = String::from("{ false }");
-        let mut lexer = Lexer::new(&input);
+        let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
 
@@ -492,7 +500,7 @@ mod tests
         let second_token = 123.45;
         let third_token = String::from("}");
         let input = String::from("{ 123.45 }");
-        let mut lexer = Lexer::new(&input);
+        let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
 
@@ -531,7 +539,7 @@ mod tests
         let first_token = String::from("{");
         let third_token = String::from("}");
         let input = String::from("{ null }");
-        let mut lexer = Lexer::new(&input);
+        let mut lexer = Lexer::new_move(input);
 
         let mut token_result = lexer.next_token();
 
@@ -564,6 +572,86 @@ mod tests
     }
 
     #[test]
+    fn lex_string()
+    {
+        let first_token = String::from("{");
+        let second_token = String::from("Hi");
+        let third_token = String::from("}");
+        let input = String::from("{ \"Hi\" }");
+        let mut lexer = Lexer::new_move(input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), &second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_characters()
+    {
+        let first_token = String::from("{");
+        let second_token = String::from("\"Hi\"");
+        let third_token = String::from("}");
+        let input = String::from("{ \"\\\"Hi\\\"\" }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), &second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
     fn lex_simple_key_value_pair()
     {
         let first_token = String::from("{");
@@ -572,7 +660,7 @@ mod tests
         let fourth_token = String::from("value");
         let fifth_token = String::from("}");
         let input = String::from("{ \"key\": \"value\" }");
-        let mut lexer = Lexer::new(&input);
+        let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
 
@@ -636,7 +724,7 @@ mod tests
         let eighth_token: f64 = 456.0;
         let ninth_token = String::from("}");
         let input = String::from("{ \"1\": 123, \"2\": 456 }");
-        let mut lexer = Lexer::new(&input);
+        let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
 
