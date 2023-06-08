@@ -134,6 +134,8 @@ mod tests
     use crate::parser::parser::Parser;
     use crate::rnodes::rnode::EnumNodeType;
     use crate::rnodes::rnode_bool::RNodeBool;
+    use crate::rnodes::rnode_double::RNodeDouble;
+    use crate::rnodes::rnode_null::RNodeNull;
 
     #[test]
     fn parse_bool()
@@ -149,6 +151,36 @@ mod tests
 
         let node_bool = rnode.downcast_rc::<RNodeBool>().map_err(|_| "Shouldn't happen").unwrap();
         assert!(node_bool.value);
+    }
+
+    #[test]
+    fn parse_double()
+    {
+        let num: f64 = 123.456;
+        let input = num.to_string();
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::DOUBLE);
+
+        let node_double = rnode.downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(node_double.value, num);
+    }
+
+    #[test]
+    fn parse_null()
+    {
+        let input = String::from("null");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::NULL);
     }
 }
 

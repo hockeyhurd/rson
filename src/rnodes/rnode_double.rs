@@ -17,7 +17,7 @@ impl RNode for RNodeDouble
 {
     fn get_node_type(&self) -> EnumNodeType
     {
-        return EnumNodeType::BOOL;
+        return EnumNodeType::DOUBLE;
     }
 }
 
