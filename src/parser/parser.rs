@@ -1,9 +1,10 @@
 use crate::parser::lexer::Lexer;
-use crate::rnodes::rnode::{NodeBool, RNode};
+use crate::rnodes::rnode::RNode;
+use crate::rnodes::rnode_bool::RNodeBool;
+use crate::rnodes::rnode_double::RNodeDouble;
 
 use super::token::{EnumTokenType, TokenTrait};
 
-// use std::boxed::Box;
 use std::rc::Rc;
 
 pub struct Parser
@@ -16,13 +17,13 @@ impl Parser
     #[allow(dead_code)]
     pub fn new(input: &String) -> Self
     {
-        Self { lexer: Lexer::new_copy(&input)/*, root: Rc::new(None)*/ }
+        Self { lexer: Lexer::new_copy(&input) }
     }
 
     #[allow(dead_code)]
     pub fn new_move(input: String) -> Self
     {
-        Self { lexer: Lexer::new_move(input)/*, root: Rc::new(None)*/ }
+        Self { lexer: Lexer::new_move(input) }
     }
 
     #[allow(dead_code)]
@@ -114,19 +115,13 @@ impl Parser
             {
                 match token.get_type()
                 {
-                    EnumTokenType::BOOL => { return Some(Rc::new(NodeBool::new(token.as_bool().unwrap()))); },
+                    EnumTokenType::BOOL => { return Some(Rc::new(RNodeBool::new(token.as_bool().unwrap()))); },
+                    EnumTokenType::DOUBLE => { return Some(Rc::new(RNodeDouble::new(token.as_double().unwrap()))); },
                     _ => { panic!(); },
                 }
             },
             Err(_) => { return None; },
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn validate(&self) -> bool
-    {
-        // TODO: Implement
-        false
     }
 }
 
@@ -135,7 +130,8 @@ mod tests
 {
     #[allow(unused_imports)]
     use crate::parser::parser::Parser;
-    use crate::rnodes::rnode::{EnumNodeType, NodeBool};
+    use crate::rnodes::rnode::EnumNodeType;
+    use crate::rnodes::rnode_bool::RNodeBool;
 
     #[test]
     fn parse_bool()
@@ -149,7 +145,7 @@ mod tests
         let rnode = node_type_result.unwrap();
         assert_eq!(rnode.get_node_type(), EnumNodeType::BOOL);
 
-        let node_bool = rnode.downcast_rc::<NodeBool>().map_err(|_| "Shouldn't happen").unwrap();
+        let node_bool = rnode.downcast_rc::<RNodeBool>().map_err(|_| "Shouldn't happen").unwrap();
         assert!(node_bool.value);
     }
 }

@@ -38,24 +38,3 @@ pub trait RNode : Downcast
 
 impl_downcast!(RNode);
 
-pub struct NodeBool
-{
-    pub value: bool,
-}
-
-impl NodeBool
-{
-    pub fn new(value: bool) -> Self
-    {
-        Self { value }
-    }
-}
-
-impl RNode for NodeBool
-{
-    fn get_node_type(&self) -> EnumNodeType
-    {
-        return EnumNodeType::BOOL;
-    }
-}
-
