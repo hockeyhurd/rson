@@ -6,7 +6,7 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq)]
 pub enum EnumNodeType
 {
-    ARRAY = 0, BOOL, DOUBLE, OBJECT, STRING
+    ARRAY = 0, BOOL, DOUBLE, NULL, OBJECT, STRING
 }
 
 pub trait Visitor

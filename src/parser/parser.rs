@@ -2,6 +2,7 @@ use crate::parser::lexer::Lexer;
 use crate::rnodes::rnode::RNode;
 use crate::rnodes::rnode_bool::RNodeBool;
 use crate::rnodes::rnode_double::RNodeDouble;
+use crate::rnodes::rnode_null::RNodeNull;
 
 use super::token::{EnumTokenType, TokenTrait};
 
@@ -117,6 +118,7 @@ impl Parser
                 {
                     EnumTokenType::BOOL => { return Some(Rc::new(RNodeBool::new(token.as_bool().unwrap()))); },
                     EnumTokenType::DOUBLE => { return Some(Rc::new(RNodeDouble::new(token.as_double().unwrap()))); },
+                    EnumTokenType::NULL => { return Some(Rc::new(RNodeNull::new())); },
                     _ => { panic!(); },
                 }
             },
