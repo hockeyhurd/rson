@@ -1,5 +1,6 @@
 #[allow(unused_imports)]
-use crate::parser::token::{EnumTokenType, TokenTrait};
+use crate::parser::snapshot::Snapshot;
+use crate::parser::token::TokenTrait;
 use crate::parser::token_bool::TokenBool;
 use crate::parser::token_double::TokenDouble;
 use crate::parser::token_string::TokenString;
@@ -64,6 +65,12 @@ impl Lexer
     }
 
     #[allow(dead_code)]
+    pub fn get_input(&self) -> &String
+    {
+        return &self.input;
+    }
+
+    #[allow(dead_code)]
     fn get_position(&self) -> usize
     {
         return self.index;
@@ -77,6 +84,18 @@ impl Lexer
         }
 
         return Err("Out of tokens".to_string());
+    }
+
+    #[allow(dead_code)]
+    pub fn restore(&mut self, snapshot: &Snapshot)
+    {
+        self.index = snapshot.get_start_pos();
+    }
+
+    #[allow(dead_code)]
+    pub fn snap(&self) -> Snapshot
+    {
+        return Snapshot::new(self.index);
     }
 
     fn next_token_internal(&mut self) -> Result<Rc<dyn TokenTrait>, String>

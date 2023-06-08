@@ -1,5 +1,6 @@
 pub mod lexer;
-pub mod node;
+pub mod parser;
+pub mod snapshot;
 pub mod token;
 pub mod token_bool;
 pub mod token_char;
