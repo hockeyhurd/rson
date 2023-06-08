@@ -3,6 +3,7 @@ use crate::rnodes::rnode::RNode;
 use crate::rnodes::rnode_bool::RNodeBool;
 use crate::rnodes::rnode_double::RNodeDouble;
 use crate::rnodes::rnode_null::RNodeNull;
+use crate::rnodes::rnode_string::RNodeString;
 
 use super::token::{EnumTokenType, TokenTrait};
 
@@ -119,6 +120,7 @@ impl Parser
                     EnumTokenType::BOOL => { return Some(Rc::new(RNodeBool::new(token.as_bool().unwrap()))); },
                     EnumTokenType::DOUBLE => { return Some(Rc::new(RNodeDouble::new(token.as_double().unwrap()))); },
                     EnumTokenType::NULL => { return Some(Rc::new(RNodeNull::new())); },
+                    EnumTokenType::STRING => { return Some(Rc::new(RNodeString::new_copy(token.as_string().unwrap()))); },
                     _ => { panic!(); },
                 }
             },
@@ -136,6 +138,7 @@ mod tests
     use crate::rnodes::rnode_bool::RNodeBool;
     use crate::rnodes::rnode_double::RNodeDouble;
     use crate::rnodes::rnode_null::RNodeNull;
+    use crate::rnodes::rnode_string::RNodeString;
 
     #[test]
     fn parse_bool()
@@ -181,6 +184,23 @@ mod tests
 
         let rnode = node_type_result.unwrap();
         assert_eq!(rnode.get_node_type(), EnumNodeType::NULL);
+    }
+
+    #[test]
+    fn parse_string()
+    {
+        let value = String::from("Hi");
+        let input = String::from("\"Hi\"");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::STRING);
+
+        let node_string = rnode.downcast_rc::<RNodeString>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(node_string.get_value(), &value);
     }
 }
 
