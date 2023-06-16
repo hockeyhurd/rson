@@ -43,10 +43,12 @@ impl Lexer
         self.lookup_table.insert('\\', handle_leading_escape);
         self.lookup_table.insert('.', handle_number);
         self.lookup_table.insert('"', handle_string);
-        self.lookup_table.insert(',', handle_symbol);
-        self.lookup_table.insert(':', handle_symbol);
-        self.lookup_table.insert('{', handle_symbol);
-        self.lookup_table.insert('}', handle_symbol);
+        self.lookup_table.insert(',', handle_single_char_symbol);
+        self.lookup_table.insert(':', handle_single_char_symbol);
+        self.lookup_table.insert('{', handle_single_char_symbol);
+        self.lookup_table.insert('}', handle_single_char_symbol);
+        self.lookup_table.insert('[', handle_single_char_symbol);
+        self.lookup_table.insert(']', handle_single_char_symbol);
 
         for ch in 'A'..'Z'
         {
@@ -388,6 +390,11 @@ fn handle_symbol(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
     }
 
     return Ok(Rc::new(TokenSymbol::new(output)));
+}
+
+fn handle_single_char_symbol(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
+{
+    return Ok(Rc::new(TokenSymbol::new(ch.to_string())));
 }
 
 #[cfg(test)]
