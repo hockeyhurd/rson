@@ -42,6 +42,7 @@ impl Lexer
     {
         self.lookup_table.insert('\\', handle_leading_escape);
         self.lookup_table.insert('.', handle_number);
+        self.lookup_table.insert('-', handle_number);
         self.lookup_table.insert('"', handle_string);
         self.lookup_table.insert(',', handle_single_char_symbol);
         self.lookup_table.insert(':', handle_single_char_symbol);
@@ -526,6 +527,86 @@ mod tests
         let second_token = 123.45;
         let third_token = String::from("}");
         let input = String::from("{ 123.45 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_double_leading_dot()
+    {
+        let first_token = String::from("{");
+        let second_token = 0.45;
+        let third_token = String::from("}");
+        let input = String::from("{ .45 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_double_leading_negative()
+    {
+        let first_token = String::from("{");
+        let second_token = -123.45;
+        let third_token = String::from("}");
+        let input = String::from("{ -123.45 }");
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();

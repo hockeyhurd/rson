@@ -663,7 +663,7 @@ mod tests
     {
         let key0 = String::from("key0");
         let key1 = String::from("key1");
-        let input = String::from("{ \"key0\": 123.456, \"key1\": 42 }");
+        let input = String::from("{ \"key0\": 123.456, \"key1\": -42 }");
         let mut parser = Parser::new(&input);
         let node_type_result = parser.parse();
 
@@ -686,7 +686,7 @@ mod tests
         assert!(opt_rnode_value2.is_some());
 
         let rnode_value2 = opt_rnode_value2.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
-        assert_eq!(rnode_value2.value, 42.0);
+        assert_eq!(rnode_value2.value, -42.0);
     }
 
     #[test]
