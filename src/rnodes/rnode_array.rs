@@ -27,6 +27,17 @@ impl RNodeArray
     {
         return self.arr.len();
     }
+
+    #[allow(dead_code)]
+    pub fn get(&self, index: usize) -> Option<Rc<dyn RNode>>
+    {
+        if index < self.arr.len()
+        {
+            return Some(Rc::clone(&self.arr[index]));
+        }
+
+        return None;
+    }
 }
 
 impl RNode for RNodeArray

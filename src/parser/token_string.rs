@@ -82,7 +82,7 @@ impl TokenTrait for TokenString
 
     fn is_double(&self) -> bool
     {
-        true
+        false
     }
 
     fn is_null(&self) -> bool

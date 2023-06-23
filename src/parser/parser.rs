@@ -125,11 +125,12 @@ impl Parser
                     EnumTokenType::SYMBOL =>
                     {
                         let symbol = token.as_symbol().unwrap();
-                        let opt_guess = self.guess_table.get(symbol);
+                        let opt_guess = &self.guess_table.get(symbol);
 
                         if opt_guess.is_some()
                         {
-                            return opt_guess.unwrap()(self, Rc::clone(&token));
+                            let fp = opt_guess.expect("It's a tarp!!");
+                            return fp(self, Rc::clone(&token));
                         }
 
                         return None;
@@ -197,6 +198,31 @@ fn try_parse_array(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option<
                     }
                 }
 
+                else if peek_token.is_bool()
+                {
+                    last_was_comma = false;
+                    nodes.push(Rc::new(RNodeBool::new(peek_token.as_bool().unwrap())));
+                }
+
+                else if peek_token.is_double()
+                {
+                    last_was_comma = false;
+                    nodes.push(Rc::new(RNodeDouble::new(peek_token.as_double().unwrap())));
+                }
+
+                else if peek_token.is_null()
+                {
+                    last_was_comma = false;
+                    nodes.push(Rc::new(RNodeNull::new()));
+                }
+
+                // TODO: Add more token types here...
+                else if peek_token.is_string()
+                {
+                    last_was_comma = false;
+                    nodes.push(Rc::new(RNodeString::new_copy(peek_token.as_string().unwrap())));
+                }
+
                 // TODO: Can we reduce logic with the above 'else' statement somehow??
                 else
                 {
@@ -235,8 +261,114 @@ mod tests
         let rnode = node_type_result.unwrap();
         assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
 
-        let _node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
-        // assert!(node_array.value);
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(node_array.is_empty());
+    }
+
+    #[test]
+    fn parse_empty_array_with_space()
+    {
+        let input = String::from("[   ]");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(node_array.is_empty());
+    }
+
+    #[test]
+    fn parse_array_with_inner_bool()
+    {
+        let input = String::from("[ true ]");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_array.is_empty());
+        assert_eq!(node_array.len(), 1);
+
+        let opt_node_bool = node_array.get(0);
+        assert!(opt_node_bool.is_some());
+
+        let node_bool = opt_node_bool.unwrap().downcast_rc::<RNodeBool>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(node_bool.value);
+    }
+
+    #[test]
+    fn parse_array_with_inner_double()
+    {
+        let input = String::from("[ 123.456 ]");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_array.is_empty());
+        assert_eq!(node_array.len(), 1);
+
+        let opt_node_double = node_array.get(0);
+        assert!(opt_node_double.is_some());
+
+        let node_double = opt_node_double.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(node_double.value, 123.456);
+    }
+
+    #[test]
+    fn parse_array_with_inner_null()
+    {
+        let input = String::from("[ null ]");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_array.is_empty());
+        assert_eq!(node_array.len(), 1);
+
+        let opt_node_null = node_array.get(0);
+        assert!(opt_node_null.is_some());
+    }
+
+    #[test]
+    fn parse_array_with_inner_string()
+    {
+        let value = String::from("Hello, world!");
+        let input = String::from("[ \"Hello, world!\" ]");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_array.is_empty());
+        assert_eq!(node_array.len(), 1);
+
+        let opt_node_string = node_array.get(0);
+        assert!(opt_node_string.is_some());
+
+        let node_string = opt_node_string.unwrap().downcast_rc::<RNodeString>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(node_string.get_value(), &value);
     }
 
     #[test]

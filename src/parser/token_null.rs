@@ -55,7 +55,7 @@ impl TokenTrait for TokenNull
 
     fn is_double(&self) -> bool
     {
-        true
+        false
     }
 
     fn is_null(&self) -> bool
