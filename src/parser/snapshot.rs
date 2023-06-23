@@ -16,5 +16,10 @@ impl Snapshot
     {
         return self.start;
     }
+
+    pub fn to_string(&self) -> String
+    {
+        return self.start.to_string();
+    }
 }
 
