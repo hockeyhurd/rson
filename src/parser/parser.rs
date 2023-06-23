@@ -262,7 +262,7 @@ fn try_parse_object(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option
         return None;
     }
 
-    let mut last_was_comma: bool = false;
+    let mut last_was_comma: bool = true;
     let mut nodes = BTreeMap::<String, Rc<dyn RNode>>::new();
 
     loop
@@ -275,44 +275,73 @@ fn try_parse_object(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option
         {
             Ok(mut peek_token) =>
             {
-                if !peek_token.is_string()
+                if !last_was_comma
                 {
-                    if peek_token.is_symbol() && peek_token.as_symbol().unwrap() == "}"
+                    last_was_comma = true;
+
+                    if !peek_token.is_symbol()
+                    {
+                        println!("Error: expected a ','");
+                        return None;
+                    }
+
+                    let symbol = peek_token.as_symbol().unwrap();
+
+                    if symbol == "}"
                     {
                         break;
                     }
 
-                    // TODO: Log the error here??
-                    return None;
-                }
-
-                let key = peek_token.as_string().unwrap().clone();
-
-                // Next expect a ':'
-                opt_peek_token = parser.lexer.next_token();
-
-                if opt_peek_token.is_err()
-                {
-                    return None;
-                }
-
-                peek_token = opt_peek_token.unwrap();
-
-                if !peek_token.is_symbol() || peek_token.as_symbol().unwrap() != ":"
-                {
-                    return None;
-                }
-
-                // Last should be a value of some RNode type.
-                let opt_node_type = parser.try_parse_type();
-
-                match opt_node_type
-                {
-                    Some(node_type) =>
+                    else if symbol != ","
                     {
-                        nodes.insert(key, Rc::clone(&node_type));
-                    },
-                    None => { println!("Error: expected to parse an RNode type at {0}", snapshot.to_string()); return None; },
+                        println!("Error: expected a ','");
+                        return None;
+                    }
+                }
+
+                else
+                {
+                    last_was_comma = false;
+
+                    if !peek_token.is_string()
+                    {
+                        if peek_token.is_symbol() && peek_token.as_symbol().unwrap() == "}"
+                        {
+                            break;
+                        }
+
+                        // TODO: Log the error here??
+                        return None;
+                    }
+
+                    let key = peek_token.as_string().unwrap().clone();
+
+                    // Next expect a ':'
+                    opt_peek_token = parser.lexer.next_token();
+
+                    if opt_peek_token.is_err()
+                    {
+                        return None;
+                    }
+
+                    peek_token = opt_peek_token.unwrap();
+
+                    if !peek_token.is_symbol() || peek_token.as_symbol().unwrap() != ":"
+                    {
+                        return None;
+                    }
+
+                    // Last should be a value of some RNode type.
+                    let opt_node_type = parser.try_parse_type();
+
+                    match opt_node_type
+                    {
+                        Some(node_type) =>
+                        {
+                            nodes.insert(key, Rc::clone(&node_type));
+                        },
+                        None => { println!("Error: expected to parse an RNode type at {0}", snapshot.to_string()); return None; },
+                    }
                 }
             },
             Err(_) => { return None; },
@@ -605,7 +634,7 @@ mod tests
     }
 
     #[test]
-    fn parse_object()
+    fn parse_object_single_pair()
     {
         let key = String::from("key");
         let input = String::from("{ \"key\": 123.456 }");
@@ -619,6 +648,7 @@ mod tests
 
         let node_object = rnode.downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
         assert!(!node_object.is_empty());
+        let key = String::from("key");
         assert_eq!(node_object.len(), 1);
 
         let opt_rnode_value = node_object.get(&key);
@@ -626,6 +656,37 @@ mod tests
 
         let rnode_value = opt_rnode_value.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
         assert_eq!(rnode_value.value, 123.456);
+    }
+
+    #[test]
+    fn parse_object_double_pair()
+    {
+        let key0 = String::from("key0");
+        let key1 = String::from("key1");
+        let input = String::from("{ \"key0\": 123.456, \"key1\": 42 }");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::OBJECT);
+
+        let node_object = rnode.downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_object.is_empty());
+        assert_eq!(node_object.len(), 2);
+
+        let opt_rnode_value = node_object.get(&key0);
+        assert!(opt_rnode_value.is_some());
+
+        let rnode_value = opt_rnode_value.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(rnode_value.value, 123.456);
+
+        let opt_rnode_value2 = node_object.get(&key1);
+        assert!(opt_rnode_value2.is_some());
+
+        let rnode_value2 = opt_rnode_value2.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(rnode_value2.value, 42.0);
     }
 
     #[test]
