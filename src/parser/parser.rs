@@ -648,7 +648,6 @@ mod tests
 
         let node_object = rnode.downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
         assert!(!node_object.is_empty());
-        let key = String::from("key");
         assert_eq!(node_object.len(), 1);
 
         let opt_rnode_value = node_object.get(&key);
