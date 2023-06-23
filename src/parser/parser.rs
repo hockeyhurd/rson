@@ -156,6 +156,7 @@ fn try_parse_array(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option<
 
     loop
     {
+        let snapshot = parser.lexer.snap();
         let peek_token_result = parser.lexer.next_token();
 
         match peek_token_result
@@ -166,6 +167,10 @@ fn try_parse_array(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option<
                 if last_was_comma
                 {
                     last_was_comma = false;
+
+                    // Restore since try_parse_type will expect the start of the next Token we want
+                    // to try and parse next.
+                    parser.lexer.restore(&snapshot);
                     let opt_type_node = parser.try_parse_type();
 
                     match opt_type_node
@@ -189,6 +194,18 @@ fn try_parse_array(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option<
                     else if symbol == ","
                     {
                         last_was_comma = true;
+                    }
+
+                    // Is a sub-array??
+                    else if symbol == "["
+                    {
+                        let opt_array_type = try_parse_array(parser, Rc::clone(&peek_token));
+
+                        match opt_array_type
+                        {
+                            Some(array_type) => { nodes.push(array_type); },
+                            None => { return None; },
+                        }
                     }
 
                     else
@@ -246,6 +263,8 @@ mod tests
     use crate::rnodes::rnode_array::RNodeArray;
     use crate::rnodes::rnode_bool::RNodeBool;
     use crate::rnodes::rnode_double::RNodeDouble;
+
+    #[allow(unused_imports)]
     use crate::rnodes::rnode_null::RNodeNull;
     use crate::rnodes::rnode_string::RNodeString;
 
@@ -279,6 +298,30 @@ mod tests
 
         let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
         assert!(node_array.is_empty());
+    }
+
+    #[test]
+    fn parse_array_with_inner_array()
+    {
+        let input = String::from("[ [] ]");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_array.is_empty());
+        assert_eq!(node_array.len(), 1);
+
+        let opt_node_array = node_array.get(0);
+        assert!(opt_node_array.is_some());
+
+        let node_array2 = opt_node_array.unwrap().downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(node_array2.is_empty());
+        assert_eq!(node_array2.len(), 0);
     }
 
     #[test]
@@ -370,6 +413,81 @@ mod tests
         let node_string = opt_node_string.unwrap().downcast_rc::<RNodeString>().map_err(|_| "Shouldn't happen").unwrap();
         assert_eq!(node_string.get_value(), &value);
     }
+
+    #[test]
+    fn parse_array_with_inner_bool_and_double()
+    {
+        let input = String::from("[ true, 123.456 ]");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_array.is_empty());
+        assert_eq!(node_array.len(), 2);
+
+        let opt_node_bool = node_array.get(0);
+        assert!(opt_node_bool.is_some());
+
+        let node_bool = opt_node_bool.unwrap().downcast_rc::<RNodeBool>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(node_bool.value);
+
+        let opt_node_double = node_array.get(1);
+        assert!(opt_node_double.is_some());
+
+        let node_double = opt_node_double.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(node_double.value, 123.456);
+    }
+
+    #[test]
+    fn parse_array_with_inner_all_nodes()
+    {
+        let input = String::from("[ [ ], true, 123.456, null, \"Hello\" ]");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_array.is_empty());
+        assert_eq!(node_array.len(), 5);
+
+        let opt_sub_array = node_array.get(0);
+        assert!(opt_sub_array.is_some());
+
+        let node_sub_array = opt_sub_array.unwrap().downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(node_sub_array.is_empty());
+        assert_eq!(node_sub_array.len(), 0);
+
+        let opt_node_bool = node_array.get(1);
+        assert!(opt_node_bool.is_some());
+
+        let node_bool = opt_node_bool.unwrap().downcast_rc::<RNodeBool>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(node_bool.value);
+
+        let opt_node_double = node_array.get(2);
+        assert!(opt_node_double.is_some());
+
+        let node_double = opt_node_double.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(node_double.value, 123.456);
+
+        let opt_node_null = node_array.get(3);
+        assert!(opt_node_null.is_some());
+
+        let opt_node_string = node_array.get(4);
+        assert!(opt_node_string.is_some());
+
+        let node_string = opt_node_string.unwrap().downcast_rc::<RNodeString>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(node_string.get_value(), "Hello");
+    }
+
 
     #[test]
     fn parse_bool()

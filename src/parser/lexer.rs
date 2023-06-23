@@ -350,7 +350,7 @@ fn handle_symbol(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
         {
             Some(cur_char) =>
             {
-                if !cur_char.is_ascii_whitespace()
+                if !cur_char.is_ascii_whitespace() && (cur_char.is_digit(10) || cur_char.is_alphabetic())
                 {
                     inst.buffer.append_char(cur_char);
                 }
@@ -392,7 +392,7 @@ fn handle_symbol(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
     return Ok(Rc::new(TokenSymbol::new(output)));
 }
 
-fn handle_single_char_symbol(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
+fn handle_single_char_symbol(_inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
     return Ok(Rc::new(TokenSymbol::new(ch.to_string())));
 }
