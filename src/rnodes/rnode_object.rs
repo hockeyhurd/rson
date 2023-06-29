@@ -40,6 +40,18 @@ impl RNodeObject
             None => { return None; },
         }
     }
+
+    #[allow(dead_code)]
+    pub fn get_mut(&mut self, key: &String) -> Option<Rc<dyn RNode>>
+    {
+        let opt_value = self.map.get_mut(key);
+
+        match opt_value
+        {
+            Some(value) => { return Some(Rc::clone(&value)); },
+            None => { return None; },
+        }
+    }
 }
 
 impl RNode for RNodeObject
