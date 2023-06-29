@@ -362,6 +362,7 @@ mod tests
     use crate::rnodes::rnode_double::RNodeDouble;
 
     #[allow(unused_imports)]
+    use crate::rnodes::rnode::RNode;
     use crate::rnodes::rnode_null::RNodeNull;
     use crate::rnodes::rnode_object::RNodeObject;
     use crate::rnodes::rnode_string::RNodeString;
@@ -686,6 +687,73 @@ mod tests
 
         let rnode_value2 = opt_rnode_value2.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
         assert_eq!(rnode_value2.value, -42.0);
+    }
+
+    #[test]
+    fn parse_object_five_pair()
+    {
+        let key0 = String::from("key0");
+        let key1 = String::from("key1");
+        let key2 = String::from("key2");
+        let key3 = String::from("key3");
+        let key4 = String::from("key4");
+        let inner_key1 = String::from("1");
+        let inner_key2 = String::from("nil");
+        let input = String::from("{ \"key0\": 123.456, \"key1\": -42, \"key2\": false, \"key3\": \"Hello\", \"key4\": { \"1\": 1, \"nil\": null } }");
+        let mut parser = Parser::new(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::OBJECT);
+
+        let node_object = rnode.downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_object.is_empty());
+        assert_eq!(node_object.len(), 5);
+
+        let opt_rnode_value = node_object.get(&key0);
+        assert!(opt_rnode_value.is_some());
+
+        let rnode_value = opt_rnode_value.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(rnode_value.value, 123.456);
+
+        let opt_rnode_value1 = node_object.get(&key1);
+        assert!(opt_rnode_value1.is_some());
+
+        let rnode_value1 = opt_rnode_value1.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(rnode_value1.value, -42.0);
+
+        let opt_rnode_value2 = node_object.get(&key2);
+        assert!(opt_rnode_value2.is_some());
+
+        let rnode_value2 = opt_rnode_value2.unwrap().downcast_rc::<RNodeBool>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!rnode_value2.value);
+
+        let opt_rnode_value3 = node_object.get(&key3);
+        assert!(opt_rnode_value3.is_some());
+
+        let rnode_value3 = opt_rnode_value3.unwrap().downcast_rc::<RNodeString>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(rnode_value3.get_value(), "Hello");
+
+        let opt_rnode_value4 = node_object.get(&key4);
+        assert!(opt_rnode_value4.is_some());
+
+        let rnode_value4 = opt_rnode_value4.unwrap().downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!rnode_value4.is_empty());
+        assert_eq!(rnode_value4.len(), 2);
+
+        let opt_inner_double = rnode_value4.get(&inner_key1);
+        assert!(opt_inner_double.is_some());
+
+        let rnode_inner_double = opt_inner_double.unwrap().downcast_rc::<RNodeDouble>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(rnode_inner_double.value, 1.0);
+
+        let opt_inner_nil = rnode_value4.get(&inner_key2);
+        assert!(opt_inner_nil.is_some());
+
+        let rnode_inner_null = opt_inner_nil.unwrap().downcast_rc::<RNodeNull>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(rnode_inner_null.get_node_type(), EnumNodeType::NULL);
     }
 
     #[test]
