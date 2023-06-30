@@ -1,6 +1,7 @@
 mod rnodes;
 mod parser;
 mod utils;
+mod visitor;
 
 use parser::lexer::Lexer;
 
