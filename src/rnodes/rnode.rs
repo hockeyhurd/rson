@@ -1,6 +1,6 @@
 use downcast_rs::Downcast;
 
-use crate::rnodes::visitor::Visitor;
+use crate::visitor::visitor::Visitor;
 
 use std::rc::Rc;
 use std::cell::RefCell;

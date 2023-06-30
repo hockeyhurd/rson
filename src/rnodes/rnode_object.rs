@@ -1,5 +1,5 @@
 use crate::rnodes::rnode::{EnumNodeType, RNode};
-use crate::rnodes::visitor::Visitor;
+use crate::visitor::visitor::Visitor;
 
 use std::collections::BTreeMap;
 use std::ops::Deref;
