@@ -21,7 +21,7 @@ pub struct Parser
 impl Parser
 {
     #[allow(dead_code)]
-    pub fn new(input: &String) -> Self
+    pub fn new_copy(input: &String) -> Self
     {
         let mut result = Self { lexer: Lexer::new_copy(&input), guess_table: HashMap::new() };
         result.init_guess_table();
@@ -85,29 +85,6 @@ impl Parser
 
         // return Err(String::from("Un-expected error occurred. Is this a Parser bug?"));
     }
-
-    /*fn try_parse_object(&mut self) -> Option<Rc<dyn TokenTrait>>
-    {
-        // TODO: Parse inner key, value pairs...
-        let empty_string: String = String::from("");
-        let token_result = self.lexer.next_token();
-
-        match token_result
-        {
-            Ok(token) =>
-            {
-                if token.is_symbol() && token.as_symbol().unwrap_or(&empty_string) == "{"
-                {
-                    return Some(Rc::clone(&token));
-                }
-
-                return None;
-            },
-            Err(_) => { return None; },
-        }
-
-        return None;
-    }*/
 
     #[allow(dead_code)]
     fn try_parse_type(&mut self) -> Option<Rc<dyn RNode>>
@@ -371,7 +348,7 @@ mod tests
     fn parse_empty_array()
     {
         let input = String::from("[]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -387,7 +364,7 @@ mod tests
     fn parse_empty_array_with_space()
     {
         let input = String::from("[   ]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -403,7 +380,7 @@ mod tests
     fn parse_array_with_inner_array()
     {
         let input = String::from("[ [] ]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -427,7 +404,7 @@ mod tests
     fn parse_array_with_inner_bool()
     {
         let input = String::from("[ true ]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -450,7 +427,7 @@ mod tests
     fn parse_array_with_inner_double()
     {
         let input = String::from("[ 123.456 ]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -473,7 +450,7 @@ mod tests
     fn parse_array_with_inner_null()
     {
         let input = String::from("[ null ]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -494,7 +471,7 @@ mod tests
     {
         let value = String::from("Hello, world!");
         let input = String::from("[ \"Hello, world!\" ]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -517,7 +494,7 @@ mod tests
     fn parse_array_with_inner_bool_and_double()
     {
         let input = String::from("[ true, 123.456 ]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -546,7 +523,7 @@ mod tests
     fn parse_array_with_inner_all_nodes()
     {
         let input = String::from("[ [ ], true, 123.456, null, \"Hello\" ]");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -592,7 +569,7 @@ mod tests
     fn parse_bool()
     {
         let input = String::from("true");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -609,7 +586,7 @@ mod tests
     {
         let num: f64 = 123.456;
         let input = num.to_string();
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -625,7 +602,7 @@ mod tests
     fn parse_null()
     {
         let input = String::from("null");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -639,7 +616,7 @@ mod tests
     {
         let key = String::from("key");
         let input = String::from("{ \"key\": 123.456 }");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -664,7 +641,7 @@ mod tests
         let key0 = String::from("key0");
         let key1 = String::from("key1");
         let input = String::from("{ \"key0\": 123.456, \"key1\": -42 }");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -700,7 +677,7 @@ mod tests
         let inner_key1 = String::from("1");
         let inner_key2 = String::from("nil");
         let input = String::from("{ \"key0\": 123.456, \"key1\": -42, \"key2\": false, \"key3\": \"Hello\", \"key4\": { \"1\": 1, \"nil\": null } }");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
@@ -761,7 +738,7 @@ mod tests
     {
         let value = String::from("Hi");
         let input = String::from("\"Hi\"");
-        let mut parser = Parser::new(&input);
+        let mut parser = Parser::new_copy(&input);
         let node_type_result = parser.parse();
 
         assert!(node_type_result.is_ok());
