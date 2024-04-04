@@ -222,6 +222,9 @@ fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
 {
     inst.buffer.append_char(ch);
     let mut seen_dot = false;
+    let mut seen_e = false;
+    let mut seen_neg = false;
+    let mut seen_number = ch >= '0' && ch <= '9';
 
     loop
     {
@@ -233,6 +236,7 @@ fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
             {
                 if cur_char >= '0' && cur_char <= '9'
                 {
+                    seen_number = true;
                     inst.buffer.append_char(cur_char);
                 }
 
@@ -244,6 +248,33 @@ fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
                     }
 
                     seen_dot = true;
+                    inst.buffer.append_char(cur_char);
+                }
+
+                else if cur_char == 'e'
+                {
+                    if seen_e
+                    {
+                        return Err(String::from("Error parsing number where a second 'e' was discovered"));
+                    }
+
+                    seen_e = true;
+                    inst.buffer.append_char(cur_char);
+                }
+
+                else if cur_char == '-'
+                {
+                    if !seen_e
+                    {
+                        return Err(String::from("Error parsing number where a '-' was discovered before 'e'"));
+                    }
+
+                    else if seen_neg
+                    {
+                        return Err(String::from("Error parsing number where a second '-' was discovered"));
+                    }
+
+                    seen_neg = true;
                     inst.buffer.append_char(cur_char);
                 }
 
@@ -260,6 +291,12 @@ fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
     if inst.buffer.empty()
     {
         return Err(String::from("Logic error in handling symbol"));
+    }
+
+    else if !seen_number
+    {
+        // TODO: print out said input would be helpful...
+        return Err(String::from("Did not see a number while lexing input"));
     }
 
     let output = inst.buffer.to_string();
@@ -554,6 +591,206 @@ mod tests
             assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
             assert!(token.is_symbol());
             assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_neg_double()
+    {
+        let first_token = String::from("{");
+        let second_token = -123.45;
+        let third_token = String::from("}");
+        let input = String::from("{ -123.45 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_one_e_ten_double()
+    {
+        let first_token = String::from("{");
+        let second_token = 1.0e10;
+        let third_token = String::from("}");
+        let input = String::from("{ 1.0e10 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_one_e_negative_ten_double()
+    {
+        let first_token = String::from("{");
+        let second_token = 1.0e-10;
+        let third_token = String::from("}");
+        let input = String::from("{ 1.0e-10 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_one_e_ten_point_five_double_fails()
+    {
+        let first_token = String::from("{");
+        let input = String::from("{ 1.0e10.5 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_neg_dot_neg_double_fails()
+    {
+        let first_token = String::from("{");
+        let input = String::from("{ -.- }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_neg_five_dot_neg_five_double_fails()
+    {
+        let first_token = String::from("{");
+        let input = String::from("{ -5.-5 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_neg_only_double_fails()
+    {
+        let first_token = String::from("{");
+        let input = String::from("{ - }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
         }
 
         token_result = lexer.next_token();
