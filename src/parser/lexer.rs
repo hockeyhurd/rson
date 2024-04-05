@@ -302,8 +302,14 @@ fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
     let output = inst.buffer.to_string();
     // println!("debug output: {0}, {1}", output, output.len());
 
-    let num = output.parse::<f64>().expect("Failed to parse output");
-    return Ok(Rc::new(TokenDouble::new(num)));
+    let opt_num = to_num(output);
+
+    if opt_num.is_some()
+    {
+        return Ok(Rc::new(TokenDouble::new(opt_num.unwrap())));
+    }
+
+    return Err(String::from("Error parsing number"));
 }
 
 fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
@@ -433,6 +439,80 @@ fn handle_symbol(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
 fn handle_single_char_symbol(_inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
     return Ok(Rc::new(TokenSymbol::new(ch.to_string())));
+}
+
+fn to_num(input: String) -> Option<f64>
+{
+    if input.len() == 0
+    {
+        return None;
+    }
+
+    let mut result = 0.0;
+    let mut multicand = 10.0;
+    let mut index: usize = 0;
+    let is_neg = input.as_bytes()[index] == ('-' as u8);
+    let mut seen_dot = false;
+
+    for ch in input.chars().skip(is_neg as usize)
+    {
+        if ch >= '0' && ch <= '9'
+        {
+            let as_digit = (ch as u32) - ('0' as u32);
+            // println!("[DEBUG]: digit is {0}", as_digit);
+
+            if !seen_dot
+            {
+                result *= multicand;
+                result += as_digit as f64;
+            }
+
+            else
+            {
+                result += (as_digit as f64) * multicand;
+            }
+        }
+
+        else if ch == '.'
+        {
+            multicand = 0.1;
+            seen_dot = true;
+            index += 1;
+            continue;
+        }
+
+        else if ch == 'e' || ch == 'E'
+        {
+            index += 1;
+            let exp_result = to_num(String::from(input.get(index..).unwrap()));
+
+            if exp_result.is_none()
+            {
+                return None;
+            }
+
+            const EXP: f64 = 10.0;
+            result *= EXP.powf(exp_result.unwrap());
+
+            break;
+        }
+
+        if seen_dot
+        {
+            multicand /= 10.0;
+        }
+
+        index += 1;
+        // println!("[DEBUG]: Current state result is {0}, multicand is {1}", result, multicand);
+    }
+
+    if is_neg
+    {
+        result = -result;
+    }
+
+    // println!("[DEBUG]: Result is {0}", result);
+    return Some(result);
 }
 
 #[cfg(test)]
@@ -638,6 +718,46 @@ mod tests
     }
 
     #[test]
+    fn lex_token_neg_zero_zero_one_double()
+    {
+        let first_token = String::from("{");
+        let second_token = -0.01;
+        let third_token = String::from("}");
+        let input = String::from("{ -0.01 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
     fn lex_token_one_e_ten_double()
     {
         let first_token = String::from("{");
@@ -681,9 +801,9 @@ mod tests
     fn lex_token_one_e_negative_ten_double()
     {
         let first_token = String::from("{");
-        let second_token = 1.0e-10;
+        let second_token = 1.5e-10;
         let third_token = String::from("}");
-        let input = String::from("{ 1.0e-10 }");
+        let input = String::from("{ 1.5e-10 }");
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
@@ -722,6 +842,26 @@ mod tests
     {
         let first_token = String::from("{");
         let input = String::from("{ 1.0e10.5 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_one_e_neg_neg_ten_double_fails()
+    {
+        let first_token = String::from("{");
+        let input = String::from("{ 1.0e--10 }");
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
