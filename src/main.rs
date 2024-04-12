@@ -1,16 +1,14 @@
-mod rnodes;
+mod log;
 mod parser;
+mod rnodes;
 mod utils;
 mod visitor;
 
+#[allow(unused_imports)]
+use log::logger::ILogger;
 use parser::parser::Parser;
 
-// #[allow(unused_imports)]
-// use crate::parser::token::{EnumTokenType, TokenTrait};
-// use crate::parser::token_bool::TokenBool;
-// use crate::parser::token_double::TokenDouble;
-// use crate::parser::token_string::TokenString;
-// use crate::parser::token_symbol::TokenSymbol;
+extern crate chrono;
 
 #[macro_use]
 extern crate downcast_rs;

@@ -61,15 +61,6 @@ impl Parser
             {
                 Ok(_token) =>
                 {
-                    // TODO: Continue pursuing this optimization at some point...
-                    /*let mut opt_result = self.try_parse_symbol(Rc::clone(&token), "{");
-
-                    if opt_result.is_some()
-                    {
-                        opt_result = self.try_parse_object();
-                        // success = opt_result.is_some();
-                    }*/
-
                     self.lexer.restore(&snapshot);
                     let opt_node_type = self.try_parse_type();
 
