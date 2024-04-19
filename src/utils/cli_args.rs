@@ -2,8 +2,8 @@ use crate::log::logger::{EnumLogLevel, get_log_level_from_string, get_std_logger
 
 pub struct CLIArgs
 {
-    input_file: Option<String>,
-    log_level: EnumLogLevel,
+    pub input_file: Option<String>,
+    pub log_level: EnumLogLevel,
 }
 
 impl CLIArgs
@@ -44,6 +44,7 @@ impl CLIArgs
                 }
 
                 self.input_file = Some(opt_next_arg.unwrap().clone());
+                skip_next = true;
             }
 
             else if arg == "--log-level"
@@ -71,11 +72,128 @@ impl CLIArgs
                         logger.warn(msg);
                     },
                 }
+
+                skip_next = true;
+            }
+
+            else
+            {
+                let mut err_msg = String::from("Invalid argument ('");
+                err_msg += &arg;
+                err_msg += &String::from("')");
+
+                return Some((-2, err_msg));
             }
         }
 
         // return Some((-1, String::from("Failed to parse input arguments.")));
         return None;
+    }
+}
+
+#[cfg(test)]
+mod tests
+{
+    #[allow(unused_imports)]
+    use crate::utils::cli_args::CLIArgs;
+    use crate::log::logger::EnumLogLevel;
+
+    fn cli_assert_fail(opt_err_pair: Option<(i32, String)>)
+    {
+        assert!(opt_err_pair.is_some());
+
+        let (err_code, err_msg) = opt_err_pair.unwrap();
+        assert_ne!(err_code, 0);
+        assert!(!err_msg.is_empty());
+    }
+
+    #[test]
+    fn parse_empty_input_fail()
+    {
+        let args: Vec<String> = vec![ String::from("rson"); 1];
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        cli_assert_fail(opt_err_pair);
+    }
+
+    #[test]
+    fn parse_one_input_invalid_arg_fail()
+    {
+        let mut args = Vec::<String>::with_capacity(2);
+        args.push(String::from("rson"));
+        args.push(String::from("--args"));
+
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        cli_assert_fail(opt_err_pair);
+    }
+
+    #[test]
+    fn parse_one_input_missing_value_fail()
+    {
+        let mut args = Vec::<String>::with_capacity(2);
+        args.push(String::from("rson"));
+        args.push(String::from("--input"));
+
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        cli_assert_fail(opt_err_pair);
+    }
+
+    #[test]
+    fn parse_two_input_expect_input_arg_value_valid()
+    {
+        let file = String::from("myfile.json");
+        let mut args = Vec::<String>::with_capacity(3);
+        args.push(String::from("rson"));
+        args.push(String::from("--input"));
+        args.push(file.clone());
+
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        assert!(opt_err_pair.is_none());
+        assert!(cli_args.input_file.is_some());
+        assert_eq!(&cli_args.input_file.unwrap(), &file);
+    }
+
+    #[test]
+    fn parse_two_input_expect_input_arg_value_valid2()
+    {
+        let mut args = Vec::<String>::with_capacity(3);
+        args.push(String::from("rson"));
+        args.push(String::from("--log-level"));
+        args.push(String::from("DEBUG"));
+
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        assert!(opt_err_pair.is_none());
+        assert_eq!(cli_args.log_level, EnumLogLevel::DEBUG);
+    }
+
+    #[test]
+    fn parse_all_input_expect_valid()
+    {
+        let file = String::from("myfile.json");
+        let mut args = Vec::<String>::with_capacity(5);
+        args.push(String::from("rson"));
+        args.push(String::from("--log-level"));
+        args.push(String::from("DEBUG"));
+        args.push(String::from("--input"));
+        args.push(file.clone());
+
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        assert!(opt_err_pair.is_none());
+        assert!(opt_err_pair.is_none());
+        assert_eq!(cli_args.log_level, EnumLogLevel::DEBUG);
+        assert!(cli_args.input_file.is_some());
+        assert_eq!(&cli_args.input_file.unwrap(), &file);
     }
 }
 

@@ -4,7 +4,7 @@ use std::ptr::addr_of;
 use std::sync::Mutex;
 use chrono;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EnumLogLevel
 {
     #[allow(dead_code)]
