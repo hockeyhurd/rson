@@ -15,14 +15,8 @@ impl CLIArgs
 
     pub fn parse(&mut self, args: &Vec<String>) -> Option<(i32, String)>
     {
-        let arg_count = args.len();
-
-        if arg_count <= 1
-        {
-            return Some((-1, String::from("Expected at least one argument")));
-        }
-
         let mut skip_next = false;
+        let arg_count = args.len();
 
         for i in 1..arg_count
         {
@@ -108,13 +102,13 @@ mod tests
     }
 
     #[test]
-    fn parse_empty_input_fail()
+    fn parse_empty_input_success()
     {
         let args: Vec<String> = vec![ String::from("rson"); 1];
         let mut cli_args = CLIArgs::new();
 
         let opt_err_pair = cli_args.parse(&args);
-        cli_assert_fail(opt_err_pair);
+        assert!(opt_err_pair.is_none());
     }
 
     #[test]

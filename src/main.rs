@@ -1,3 +1,4 @@
+mod io;
 mod log;
 mod parser;
 mod rnodes;
@@ -5,10 +6,9 @@ mod utils;
 mod visitor;
 
 use log::logger::ILogger;
-use parser::parser::Parser;
 use utils::cli_args::CLIArgs;
 
-// use crate::log::logger::{STDLogger, STD_LOGGER};
+use crate::io::reader::RsonReader;
 
 extern crate chrono;
 
@@ -29,25 +29,34 @@ fn main()
         logger.fatal(result.1, Some(result.0));
     }
 
-    let input = String::from("{ \"key\": 123.456 }"); // Correct
-    let mut parser = Parser::new_copy(&input);
-    let root_node_result = parser.parse();
+    let rson_reader: RsonReader;
 
-    if root_node_result.is_ok()
+    match cli_args.input_file
     {
-        // println!("{:?}", root_node_result.unwrap().get_node_type());
-        // println!("{}", root_node_result.unwrap().get_node_type());
-        let enum_type = root_node_result.unwrap().get_node_type();
-        let logger_cell = log::logger::get_std_logger().lock().unwrap();
-        let mut logger = logger_cell.borrow_mut();
-        logger.info(enum_type.to_string());
+        Some(input_file) => { rson_reader = RsonReader::from_file(&input_file); },
+        None => { rson_reader = RsonReader::from_stdin() }
     }
 
-    else
-    {
-        println!("{}", root_node_result.err().unwrap());
-    }
+    let root_node_result = rson_reader.parse();
 
-    println!("Done!");
+    match root_node_result
+    {
+        Ok(root_node) =>
+        {
+            let enum_type = root_node.get_node_type();
+            let logger_cell = log::logger::get_std_logger().lock().unwrap();
+            let mut logger = logger_cell.borrow_mut();
+            logger.info(enum_type.to_string());
+        },
+        Err(msg) =>
+        {
+            let logger_cell = log::logger::get_std_logger().lock().unwrap();
+            let mut logger = logger_cell.borrow_mut();
+            logger.error(msg);
+
+            // "Normal" error in parsing will be >0
+            std::process::exit(1);
+        }
+    }
 }
 

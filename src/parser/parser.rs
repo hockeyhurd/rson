@@ -43,13 +43,6 @@ impl Parser
     }
 
     #[allow(dead_code)]
-    pub fn from_file(path: &String) -> Self
-    {
-        let input = std::fs::read_to_string(&path).expect("Failed to read file");
-        return Self::new_move(input);
-    }
-
-    #[allow(dead_code)]
     pub fn parse(&mut self) -> Result<Rc<dyn RNode>, String>
     {
         loop
