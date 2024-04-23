@@ -251,7 +251,7 @@ fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, Strin
                     inst.buffer.append_char(cur_char);
                 }
 
-                else if cur_char == 'e'
+                else if cur_char == 'e' || cur_char == 'E'
                 {
                     if seen_e
                     {
@@ -684,6 +684,46 @@ mod tests
         let second_token = -123.45;
         let third_token = String::from("}");
         let input = String::from("{ -123.45 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_double_big_e_10()
+    {
+        let first_token = String::from("{");
+        let second_token = 123.45E10;
+        let third_token = String::from("}");
+        let input = String::from("{ 123.45E10 }");
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
