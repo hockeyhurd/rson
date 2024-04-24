@@ -63,7 +63,7 @@ impl Lexer
 
         for i in 0..10u32
         {
-            self.lookup_table.insert(char::from_digit(i, 10).expect("Failed to conver i to a char"), handle_number);
+            self.lookup_table.insert(char::from_digit(i, 10).expect("Failed to convert 'i' to a char"), handle_number);
         }
     }
 
@@ -714,6 +714,35 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_explicit_pos_double_fails()
+    {
+        let first_token = String::from("{");
+        let input = String::from("{ +123.45 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_double_neg_double_fails()
+    {
+        let input = String::from("--123.45");
+        let mut lexer = Lexer::new_copy(&input);
+        let token_result = lexer.next_token();
         assert!(token_result.is_err());
     }
 
