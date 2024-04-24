@@ -170,6 +170,21 @@ mod tests
     }
 
     #[test]
+    fn parse_two_input_expect_input_arg_value_mixed_case_valid3()
+    {
+        let mut args = Vec::<String>::with_capacity(3);
+        args.push(String::from("rson"));
+        args.push(String::from("--log-level"));
+        args.push(String::from("DeBuG"));
+
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        assert!(opt_err_pair.is_none());
+        assert_eq!(cli_args.log_level, EnumLogLevel::DEBUG);
+    }
+
+    #[test]
     fn parse_all_input_expect_valid()
     {
         let file = String::from("myfile.json");

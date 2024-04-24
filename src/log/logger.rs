@@ -50,6 +50,7 @@ impl EnumLogLevel
 
 pub fn get_log_level_from_string(string: &String) -> Result<EnumLogLevel, String>
 {
+    let string_upper = string.to_uppercase();
     static mut LOOKUP_TABLE: Option<HashMap<String, EnumLogLevel>> = None;
 
     unsafe
@@ -71,7 +72,7 @@ pub fn get_log_level_from_string(string: &String) -> Result<EnumLogLevel, String
 
         if let Some(table) = opt_table
         {
-            let result = table.get(string);
+            let result = table.get(&string_upper);
 
             if result.is_some()
             {
