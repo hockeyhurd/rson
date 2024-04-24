@@ -80,7 +80,6 @@ impl CLIArgs
             }
         }
 
-        // return Some((-1, String::from("Failed to parse input arguments.")));
         return None;
     }
 }
@@ -88,7 +87,6 @@ impl CLIArgs
 #[cfg(test)]
 mod tests
 {
-    #[allow(unused_imports)]
     use crate::utils::cli_args::CLIArgs;
     use crate::log::logger::EnumLogLevel;
 

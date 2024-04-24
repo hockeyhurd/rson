@@ -315,14 +315,12 @@ fn try_parse_object(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option
 #[cfg(test)]
 mod tests
 {
-    #[allow(unused_imports)]
     use crate::parser::parser::Parser;
     use crate::rnodes::rnode::EnumNodeType;
     use crate::rnodes::rnode_array::RNodeArray;
     use crate::rnodes::rnode_bool::RNodeBool;
     use crate::rnodes::rnode_double::RNodeDouble;
 
-    #[allow(unused_imports)]
     use crate::rnodes::rnode::RNode;
     use crate::rnodes::rnode_null::RNodeNull;
     use crate::rnodes::rnode_object::RNodeObject;

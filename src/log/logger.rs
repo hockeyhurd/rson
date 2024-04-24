@@ -7,7 +7,6 @@ use chrono;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EnumLogLevel
 {
-    #[allow(dead_code)]
     FATAL, ERROR, WARN, INFO, DEBUG
 }
 

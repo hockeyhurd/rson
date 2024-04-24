@@ -12,7 +12,6 @@ pub struct RNodeArray
 
 impl RNodeArray
 {
-    #[allow(dead_code)]
     pub fn new(arr: Vec<Rc<dyn RNode>>) -> Self
     {
         Self { arr }
