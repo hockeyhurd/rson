@@ -1,7 +1,9 @@
 use crate::rnodes::rnode::{EnumNodeType, RNode};
+use crate::visitor::visitor::Visitor;
 
 use std::collections::BTreeMap;
 use std::ops::Deref;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct RNodeObject
@@ -40,6 +42,18 @@ impl RNodeObject
             None => { return None; },
         }
     }
+
+    #[allow(dead_code)]
+    pub fn get_mut(&mut self, key: &String) -> Option<Rc<dyn RNode>>
+    {
+        let opt_value = self.map.get_mut(key);
+
+        match opt_value
+        {
+            Some(value) => { return Some(Rc::clone(&value)); },
+            None => { return None; },
+        }
+    }
 }
 
 impl RNode for RNodeObject
@@ -47,6 +61,11 @@ impl RNode for RNodeObject
     fn get_node_type(&self) -> EnumNodeType
     {
         return EnumNodeType::OBJECT;
+    }
+
+    fn accept(&mut self, visitor: Rc<RefCell<dyn Visitor>>)
+    {
+        visitor.borrow_mut().visit_object(self);
     }
 }
 

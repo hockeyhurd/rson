@@ -1,7 +1,10 @@
 use downcast_rs::Downcast;
 
-use std::any::Any;
+use crate::visitor::visitor::Visitor;
+
 use std::rc::Rc;
+use std::cell::RefCell;
+use std::fmt::{self, Display};
 
 #[derive(Debug, PartialEq)]
 pub enum EnumNodeType
@@ -9,31 +12,26 @@ pub enum EnumNodeType
     ARRAY = 0, BOOL, DOUBLE, NULL, OBJECT, STRING
 }
 
-pub trait Visitor
-{
-    fn visit_array(&mut self, node: &mut Rc<dyn Visitor>) -> dyn Any;
-    fn visit_bool(&mut self, node: &mut Rc<dyn Visitor>) -> dyn Any;
-    fn visit_char(&mut self, node: &mut Rc<dyn Visitor>) -> dyn Any;
-    fn visit_object(&mut self, node: &mut Rc<dyn Visitor>) -> dyn Any;
-    fn visit_string(&mut self, node: &mut Rc<dyn Visitor>) -> dyn Any;
-}
-
 pub trait RNode : Downcast
 {
     fn get_node_type(&self) -> EnumNodeType;
+    fn accept(&mut self, visitor: Rc<RefCell<dyn Visitor>>);
+}
 
-    /*fn accept(&mut self, visitor: Rc<dyn Visitor>) -> dyn Any
+impl Display for EnumNodeType
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result
     {
-        match self.get_node_type()
+        match self
         {
-            EnumNodeType::ARRAY => { return visitor.visit_array(self); },
-            EnumNodeType::BOOL => { return visitor.visit_bool(self); },
-            EnumNodeType::DOUBLE => { return visitor.visit_double(self); },
-            EnumNodeType::OBJECT => { return visitor.visit_object(self); },
-            EnumNodeType::STRING => { return visitor.visit_string(self); },
-            _ => { panic!(); },
+            EnumNodeType::ARRAY => write!(f, "ARRAY"),
+            EnumNodeType::BOOL => write!(f, "BOOL"),
+            EnumNodeType::DOUBLE => write!(f, "DOUBLE"),
+            EnumNodeType::NULL => write!(f, "NULL"),
+            EnumNodeType::OBJECT => write!(f, "OBJECT"),
+            EnumNodeType::STRING => write!(f, "STRING"),
         }
-    }*/
+    }
 }
 
 impl_downcast!(RNode);

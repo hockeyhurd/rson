@@ -1,4 +1,8 @@
 use crate::rnodes::rnode::{EnumNodeType, RNode};
+use crate::visitor::visitor::Visitor;
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct RNodeString
 {
@@ -43,6 +47,11 @@ impl RNode for RNodeString
     fn get_node_type(&self) -> EnumNodeType
     {
         return EnumNodeType::STRING;
+    }
+
+    fn accept(&mut self, visitor: Rc<RefCell<dyn Visitor>>)
+    {
+        visitor.borrow_mut().visit_string(self);
     }
 }
 
