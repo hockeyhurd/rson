@@ -10,10 +10,35 @@ use utils::cli_args::CLIArgs;
 
 use crate::io::reader::RsonReader;
 
+#[allow(unused_imports)]
+use crate::io::writer::RsonWriter;
+
 extern crate chrono;
 
 #[macro_use]
 extern crate downcast_rs;
+
+// @@@ test only
+use crate::rnodes::rnode::RNode;
+use std::rc::Rc;
+
+fn test_write(node: Rc<dyn RNode>)
+{
+    let path = String::from("test.json");
+    let writer_result = RsonWriter::new(&path, 4);
+
+    match writer_result
+    {
+        Ok(mut writer) =>
+        {
+            let _ = writer.write(node);
+            let _ = writer.flush();
+        },
+        Err(_e) => {}
+    }
+}
+
+// @@@ test only
 
 fn main()
 {
@@ -47,6 +72,7 @@ fn main()
             let logger_cell = log::logger::get_std_logger().lock().unwrap();
             let mut logger = logger_cell.borrow_mut();
             logger.info(enum_type.to_string());
+            test_write(root_node.clone());
         },
         Err(msg) =>
         {

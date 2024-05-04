@@ -12,6 +12,7 @@ pub enum EnumLogLevel
 
 pub trait ILogger
 {
+    #[allow(dead_code)]
     fn debug(&mut self, msg: String);
     fn error(&mut self, msg: String);
     fn fatal(&mut self, msg: String, opt_error_code: Option<i32>);

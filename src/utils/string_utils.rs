@@ -11,6 +11,11 @@ impl StringBuilder
         Self { buffer: Vec::with_capacity(capacity) }
     }
 
+    pub fn get(&self, index: usize) -> Option<&char>
+    {
+        return self.buffer.get(index);
+    }
+
     #[allow(dead_code)]
     pub fn get_capacity(&self) -> usize
     {
@@ -35,20 +40,31 @@ impl StringBuilder
         return self.buffer.len();
     }
 
-    #[allow(dead_code)]
     pub fn append_char(&mut self, value: char)
     {
-        // let _ = write!(self.buffer, "{}", value);
         self.buffer.push(value);
     }
 
-    #[allow(dead_code)]
-    pub fn append_copy(&mut self, value: &String)
+    pub fn append_str(&mut self, value: &str)
     {
         for ch in value.chars()
         {
             self.buffer.push(ch);
         }
+    }
+
+    pub fn append_string(&mut self, value: &String)
+    {
+        for ch in value.chars()
+        {
+            self.buffer.push(ch);
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn as_slice(&self) -> &[char]
+    {
+        return self.buffer.as_slice();
     }
 
     #[allow(dead_code)]
@@ -104,24 +120,10 @@ mod tests
         assert_eq!(builder.get_capacity(), capacity);
 
         let input = String::from("Hello, world!");
-        builder.append_copy(&input);
+        builder.append_string(&input);
         assert_eq!(builder.empty(), false);
         assert_eq!(builder.len(), input.len());
         assert_eq!(builder.to_string(), input);
     }
-
-    /*#[test]
-    fn write_hello_world_via_move()
-    {
-        let capacity: usize = 4096;
-        let mut builder = StringBuilder::new(capacity);
-        assert_eq!(builder.get_capacity(), capacity);
-
-        let input = String::from("Hello, world!");
-        builder.append_move(input.clone());
-        assert_eq!(builder.empty(), false);
-        assert_eq!(builder.len(), input.len());
-        assert_eq!(builder.to_string(), input);
-    }*/
 }
 

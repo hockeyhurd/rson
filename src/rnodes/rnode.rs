@@ -2,8 +2,6 @@ use downcast_rs::Downcast;
 
 use crate::visitor::visitor::Visitor;
 
-use std::rc::Rc;
-use std::cell::RefCell;
 use std::fmt::{self, Display};
 
 #[derive(Debug, PartialEq)]
@@ -15,7 +13,7 @@ pub enum EnumNodeType
 pub trait RNode : Downcast
 {
     fn get_node_type(&self) -> EnumNodeType;
-    fn accept(&mut self, visitor: Rc<RefCell<dyn Visitor>>);
+    fn accept(&self, visitor: &dyn Visitor);
 }
 
 impl Display for EnumNodeType

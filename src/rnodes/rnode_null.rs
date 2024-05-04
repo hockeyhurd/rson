@@ -1,9 +1,6 @@
 use crate::rnodes::rnode::{EnumNodeType, RNode};
 use crate::visitor::visitor::Visitor;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 pub struct RNodeNull;
 
 impl RNodeNull
@@ -21,9 +18,9 @@ impl RNode for RNodeNull
         return EnumNodeType::NULL;
     }
 
-    fn accept(&mut self, visitor: Rc<RefCell<dyn Visitor>>)
+    fn accept(&self, visitor: &dyn Visitor)
     {
-        visitor.borrow_mut().visit_null(self);
+        visitor.visit_null(self);
     }
 }
 

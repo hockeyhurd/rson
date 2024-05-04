@@ -1,7 +1,7 @@
 use crate::parser::parser::Parser;
 use crate::rnodes::rnode::RNode;
 
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
 
 pub struct RsonReader
@@ -26,7 +26,7 @@ impl RsonReader
 
     pub fn parse(&self) -> Result<Rc<dyn RNode>, String>
     {
-        let mut parser: std::cell::RefMut<Parser> = self.parser.borrow_mut();
+        let mut parser: RefMut<Parser> = self.parser.borrow_mut();
         parser.parse()
     }
 }
