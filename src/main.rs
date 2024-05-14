@@ -10,6 +10,9 @@ use utils::cli_args::CLIArgs;
 
 use crate::io::reader::RsonReader;
 
+#[allow(unused_imports)]
+use crate::io::writer::RsonWriter;
+
 extern crate chrono;
 
 #[macro_use]

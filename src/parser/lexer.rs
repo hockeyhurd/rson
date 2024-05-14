@@ -451,8 +451,14 @@ fn to_num(input: String) -> Option<f64>
     let mut result = 0.0;
     let mut multicand = 10.0;
     let mut index: usize = 0;
-    let is_neg = input.as_bytes()[index] == ('-' as u8);
     let mut seen_dot = false;
+    let is_neg = input.as_bytes()[index] == ('-' as u8);
+
+    // Need to offset if negative.
+    if is_neg
+    {
+        index += 1;
+    }
 
     for ch in input.chars().skip(is_neg as usize)
     {
@@ -753,6 +759,46 @@ mod tests
         let second_token = 123.45E10;
         let third_token = String::from("}");
         let input = String::from("{ 123.45E10 }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::DOUBLE);
+            assert!(token.is_double());
+            assert_eq!(token.as_double().unwrap(), second_token);
+        }
+
+        token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_token_neg_double_big_e_10()
+    {
+        let first_token = String::from("{");
+        let second_token = -123.45E10;
+        let third_token = String::from("}");
+        let input = String::from("{ -123.45E10 }");
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();

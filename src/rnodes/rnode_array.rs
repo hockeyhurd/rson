@@ -2,7 +2,6 @@ use crate::rnodes::rnode::{EnumNodeType, RNode};
 use crate::visitor::visitor::Visitor;
 
 use std::ops::Deref;
-use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct RNodeArray
@@ -48,9 +47,9 @@ impl RNode for RNodeArray
         return EnumNodeType::ARRAY;
     }
 
-    fn accept(&mut self, visitor: Rc<RefCell<dyn Visitor>>)
+    fn accept(&self, visitor: &dyn Visitor)
     {
-        visitor.borrow_mut().visit_array(self);
+        visitor.visit_array(self);
     }
 }
 

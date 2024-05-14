@@ -3,7 +3,6 @@ use crate::visitor::visitor::Visitor;
 
 use std::collections::BTreeMap;
 use std::ops::Deref;
-use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct RNodeObject
@@ -54,6 +53,11 @@ impl RNodeObject
             None => { return None; },
         }
     }
+
+    pub fn get_map(&self) -> &BTreeMap<String, Rc<dyn RNode>>
+    {
+        return &self.map;
+    }
 }
 
 impl RNode for RNodeObject
@@ -63,9 +67,9 @@ impl RNode for RNodeObject
         return EnumNodeType::OBJECT;
     }
 
-    fn accept(&mut self, visitor: Rc<RefCell<dyn Visitor>>)
+    fn accept(&self, visitor: &dyn Visitor)
     {
-        visitor.borrow_mut().visit_object(self);
+        visitor.visit_object(self);
     }
 }
 

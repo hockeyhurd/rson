@@ -1,9 +1,6 @@
 use crate::rnodes::rnode::{EnumNodeType, RNode};
 use crate::visitor::visitor::Visitor;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
 pub struct RNodeBool
 {
     pub value: bool,
@@ -24,9 +21,9 @@ impl RNode for RNodeBool
         return EnumNodeType::BOOL;
     }
 
-    fn accept(&mut self, visitor: Rc<RefCell<dyn Visitor>>)
+    fn accept(&self, visitor: &dyn Visitor)
     {
-        visitor.borrow_mut().visit_bool(self);
+        visitor.visit_bool(self);
     }
 }
 
