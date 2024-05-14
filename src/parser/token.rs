@@ -1,6 +1,5 @@
 use downcast_rs::Downcast;
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub enum EnumTokenType
 {

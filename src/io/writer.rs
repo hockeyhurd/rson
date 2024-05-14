@@ -1,5 +1,4 @@
 use crate::log::logger::{ILogger, get_std_logger};
-#[allow(unused_imports)]
 use crate::rnodes::rnode::{EnumNodeType, RNode};
 use crate::rnodes::rnode_array::RNodeArray;
 use crate::rnodes::rnode_bool::RNodeBool;
@@ -16,7 +15,6 @@ use std::io::{BufWriter, Write};
 use std::io::Stdout;
 use std::rc::Rc;
 
-#[allow(dead_code)]
 pub struct RsonWriter
 {
     writer: Option<BufWriter<File>>,

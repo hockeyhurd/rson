@@ -5,7 +5,6 @@ pub struct StringBuilder
 
 impl StringBuilder
 {
-    #[allow(dead_code)]
     pub fn new(capacity: usize) -> Self
     {
         Self { buffer: Vec::with_capacity(capacity) }
@@ -22,19 +21,16 @@ impl StringBuilder
         return self.buffer.capacity();
     }
 
-    #[allow(dead_code)]
     pub fn empty(&self) -> bool
     {
         return self.buffer.len() == 0;
     }
 
-    #[allow(dead_code)]
     pub fn clear(&mut self)
     {
         self.buffer.clear();
     }
 
-    #[allow(dead_code)]
     pub fn len(&self) -> usize
     {
         return self.buffer.len();
@@ -67,7 +63,6 @@ impl StringBuilder
         return self.buffer.as_slice();
     }
 
-    #[allow(dead_code)]
     pub fn to_string(&self) -> String
     {
         let mut string = String::with_capacity(self.buffer.len());
