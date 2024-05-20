@@ -6,19 +6,27 @@ on:
   pull_request:
     branches: [ "main" ]
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   build:
+  strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - {runs_on: macos-latest, name: "macOS cargo Debug", BUILD_TYPE: ""}
+          - {runs_on: macos-latest, name: "macOS cargo Release", BUILD_TYPE: "--release" }
+          - {runs_on: ubuntu-latest, name: "Ubuntu cargo Debug", BUILD_TYPE: "" }
+          - {runs_on: ubuntu-latest, name: "Ubuntu cargo Release", BUILD_TYPE: "--release" }
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.toolchain.runs_on }}
+    env:
+      CARGO_TERM_COLOR: always
+      BUILD_TYPE: ${{ matrix.toolchain.BUILD_TYPE }}
 
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose ${BUILD_TYPE}
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --verbose ${BUILD_TYPE}
     - name: Run help menu
-      run: cargo run --verbose -- --help
+      run: cargo run --verbose ${BUILD_TYPE} -- --help
