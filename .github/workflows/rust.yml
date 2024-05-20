@@ -16,6 +16,8 @@ jobs:
           - {runs_on: macos-latest, name: "macOS cargo Release", BUILD_TYPE: "--release" }
           - {runs_on: ubuntu-latest, name: "Ubuntu cargo Debug", BUILD_TYPE: "" }
           - {runs_on: ubuntu-latest, name: "Ubuntu cargo Release", BUILD_TYPE: "--release" }
+          - {runs_on: windows-latest, name: "Windows cargo Debug", BUILD_TYPE: "" }
+          - {runs_on: windows-latest, name: "Windows cargo Release", BUILD_TYPE: "--release" }
 
     runs-on: ${{ matrix.toolchain.runs_on }}
     env:
