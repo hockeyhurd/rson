@@ -26,19 +26,26 @@ fn main()
 
     if opt_cli_result.is_some()
     {
-        let result = opt_cli_result.unwrap();
-        let logger_cell = log::logger::get_std_logger().lock().unwrap();
-        let mut logger = logger_cell.borrow_mut();
-        logger.fatal(result.1, Some(result.0));
+        let (err_code, msg) = opt_cli_result.unwrap();
+
+        if err_code == 0
+        {
+            println!("{}", msg);
+            std::process::exit(err_code);
+        }
+
+        else
+        {
+            let logger_cell = log::logger::get_std_logger().lock().unwrap();
+            let mut logger = logger_cell.borrow_mut();
+            logger.fatal(msg, Some(err_code));
+        }
     }
 
-    let rson_reader: RsonReader;
-
-    match cli_args.input_file
-    {
-        Some(input_file) => { rson_reader = RsonReader::from_file(&input_file); },
-        None => { rson_reader = RsonReader::from_stdin() }
-    }
+    let rson_reader: RsonReader = match cli_args.input_file {
+        Some(input_file) => { RsonReader::from_file(&input_file) },
+        None => { RsonReader::from_stdin() }
+    };
 
     let root_node_result = rson_reader.parse();
 
