@@ -1,4 +1,5 @@
 use crate::log::logger::{EnumLogLevel, get_log_level_from_string, get_std_logger, ILogger};
+use crate::utils::string_utils::StringBuilder;
 
 pub struct CLIArgs
 {
@@ -11,6 +12,23 @@ impl CLIArgs
     pub fn new() -> Self
     {
         Self { input_file: None, log_level: EnumLogLevel::WARN }
+    }
+
+    fn get_usage(&self) -> String
+    {
+        let mut builder = StringBuilder::new(1024);
+
+        // Usage
+        builder.append_str("Usage: rson\n");
+        builder.append_str("NOTE: with no supplied arguments, this will read from std input.\n      You may prefer to run from an input file. See '--input' below.\n");
+        builder.append_char('\n');
+
+        // Flags
+        builder.append_str("-h,--help                         Prints this help menu.\n");
+        builder.append_str("-i,--input <FILE>                 Specifies to read from a file rather than std input.\n");
+        builder.append_str("-l,--log-level <log-level>        Sets the log level.\n");
+
+        builder.to_string()
     }
 
     pub fn parse(&mut self, args: &Vec<String>) -> Option<(i32, String)>
@@ -28,7 +46,13 @@ impl CLIArgs
 
             let arg = args.get(i).expect("Failed to unwrap argument");
 
-            if arg == "--input"
+            if arg == "-h" || arg == "--help"
+            {
+                let msg = self.get_usage();
+                return Some((0, msg));
+            }
+
+            else if arg == "-i" || arg == "--input"
             {
                 let opt_next_arg = args.get(i + 1);
 
@@ -41,7 +65,7 @@ impl CLIArgs
                 skip_next = true;
             }
 
-            else if arg == "--log-level"
+            else if arg == "-l" || arg == "--log-level"
             {
                 let opt_next_arg = args.get(i + 1);
 
@@ -110,6 +134,44 @@ mod tests
     }
 
     #[test]
+    fn parse_help_menu()
+    {
+        let file = String::from("myfile.json");
+        let mut args = Vec::<String>::with_capacity(3);
+        args.push(String::from("rson"));
+        args.push(String::from("--help"));
+        args.push(file.clone());
+
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        assert!(opt_err_pair.is_some());
+
+        let (err_code, msg) = opt_err_pair.unwrap();
+        assert_eq!(err_code, 0);
+        assert!(msg.len() > 0);
+    }
+
+    #[test]
+    fn parse_help_menu_short()
+    {
+        let file = String::from("myfile.json");
+        let mut args = Vec::<String>::with_capacity(3);
+        args.push(String::from("rson"));
+        args.push(String::from("-h"));
+        args.push(file.clone());
+
+        let mut cli_args = CLIArgs::new();
+
+        let opt_err_pair = cli_args.parse(&args);
+        assert!(opt_err_pair.is_some());
+
+        let (err_code, msg) = opt_err_pair.unwrap();
+        assert_eq!(err_code, 0);
+        assert!(msg.len() > 0);
+    }
+
+    #[test]
     fn parse_one_input_invalid_arg_fail()
     {
         let mut args = Vec::<String>::with_capacity(2);
@@ -130,7 +192,6 @@ mod tests
         args.push(String::from("--input"));
 
         let mut cli_args = CLIArgs::new();
-
         let opt_err_pair = cli_args.parse(&args);
         cli_assert_fail(opt_err_pair);
     }
@@ -145,7 +206,6 @@ mod tests
         args.push(file.clone());
 
         let mut cli_args = CLIArgs::new();
-
         let opt_err_pair = cli_args.parse(&args);
         assert!(opt_err_pair.is_none());
         assert!(cli_args.input_file.is_some());
@@ -155,20 +215,35 @@ mod tests
     #[test]
     fn parse_two_input_expect_input_arg_value_valid2()
     {
+        let file = String::from("myfile.json");
+        let mut args = Vec::<String>::with_capacity(3);
+        args.push(String::from("rson"));
+        args.push(String::from("-i"));
+        args.push(file.clone());
+
+        let mut cli_args = CLIArgs::new();
+        let opt_err_pair = cli_args.parse(&args);
+        assert!(opt_err_pair.is_none());
+        assert!(cli_args.input_file.is_some());
+        assert_eq!(&cli_args.input_file.unwrap(), &file);
+    }
+
+    #[test]
+    fn parse_two_input_expect_input_arg_value_valid3()
+    {
         let mut args = Vec::<String>::with_capacity(3);
         args.push(String::from("rson"));
         args.push(String::from("--log-level"));
         args.push(String::from("DEBUG"));
 
         let mut cli_args = CLIArgs::new();
-
         let opt_err_pair = cli_args.parse(&args);
         assert!(opt_err_pair.is_none());
         assert_eq!(cli_args.log_level, EnumLogLevel::DEBUG);
     }
 
     #[test]
-    fn parse_two_input_expect_input_arg_value_mixed_case_valid3()
+    fn parse_two_input_expect_input_arg_value_mixed_case_valid4()
     {
         let mut args = Vec::<String>::with_capacity(3);
         args.push(String::from("rson"));
@@ -176,7 +251,20 @@ mod tests
         args.push(String::from("DeBuG"));
 
         let mut cli_args = CLIArgs::new();
+        let opt_err_pair = cli_args.parse(&args);
+        assert!(opt_err_pair.is_none());
+        assert_eq!(cli_args.log_level, EnumLogLevel::DEBUG);
+    }
 
+    #[test]
+    fn parse_two_input_expect_input_arg_value_mixed_case_valid5()
+    {
+        let mut args = Vec::<String>::with_capacity(3);
+        args.push(String::from("rson"));
+        args.push(String::from("-l"));
+        args.push(String::from("DeBuG"));
+
+        let mut cli_args = CLIArgs::new();
         let opt_err_pair = cli_args.parse(&args);
         assert!(opt_err_pair.is_none());
         assert_eq!(cli_args.log_level, EnumLogLevel::DEBUG);
