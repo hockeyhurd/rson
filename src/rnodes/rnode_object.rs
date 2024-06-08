@@ -12,7 +12,6 @@ pub struct RNodeObject
 
 impl RNodeObject
 {
-    #[allow(dead_code)]
     pub fn new(map: BTreeMap<String, Rc<dyn RNode>>) -> Self
     {
         Self { map }
@@ -28,6 +27,20 @@ impl RNodeObject
     pub fn len(&self) -> usize
     {
         return self.map.len();
+    }
+
+    #[allow(dead_code)]
+    pub fn add_copy(mut self, key: &String, value: Rc<dyn RNode>) -> Self
+    {
+        self.map.insert(key.clone(), value);
+        self
+    }
+
+    #[allow(dead_code)]
+    pub fn add_move(mut self, key: String, value: Rc<dyn RNode>) -> Self
+    {
+        self.map.insert(key, value);
+        self
     }
 
     #[allow(dead_code)]
