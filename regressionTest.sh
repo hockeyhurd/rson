@@ -1,29 +1,42 @@
 #!/bin/bash
 
 TEST_DIR=$1
+BUILD_TYPE="--$2"
 
 if [ -z "$1" ]; then
     TEST_DIR='tests'
 fi
 
-echo "TEST_DIR: " $TEST_DIR
+if [ -z "$2" ]; then
+    # Note: In cargo, there is no '--debug' but only '--release'.
+    # Since we default to running in debug, we simply set this to
+    # an empty string.
+    BUILD_TYPE=''
+elif [ "$2" == "debug" ]; then
+    BUILD_TYPE=''
+else
+    echo "Un-supported build type."
+    exit -1
+fi
+
+echo "TEST_DIR: " ${TEST_DIR}
 
 function unitTests()
 {
     #echo $PWD
-    local testFiles=`find $TEST_DIR -type f -name "*.json" -print`
-    echo "Tests to run: " $testFiles
+    local testFiles=`find ${TEST_DIR} -type f -name "*.json" -print`
+    echo "Tests to run: " ${testFiles}
 
-    for test in $testFiles
+    for test in ${testFiles}
     do
-        echo "Starting test: " $test
-        cargo run -- --input $test
+        echo "Starting test: " ${test}
+        cargo run ${BUILD_TYPE} -- --input ${test}
         retVal=$?
         #echo 'Result: '$retVal
-        echo "Test: " $test " completed with exit code: " $retVal
+        echo "Test: " ${test} " completed with exit code: " ${retVal}
 
-        if [ $retVal -ne 0 ]; then
-            exit $retVal
+        if [ ${retVal} -ne 0 ]; then
+            exit ${retVal}
         fi
     done
 }

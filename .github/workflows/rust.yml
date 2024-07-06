@@ -28,7 +28,9 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose ${BUILD_TYPE}
-    - name: Run tests
+    - name: Run unit tests
       run: cargo test --verbose ${BUILD_TYPE}
+    - name: Run regression tests
+      run: bash regressionTesting.sh tests ${BUILD_TYPE}
     - name: Run help menu
       run: cargo run --verbose ${BUILD_TYPE} -- --help
