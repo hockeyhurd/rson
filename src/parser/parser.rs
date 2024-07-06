@@ -618,6 +618,30 @@ mod tests
     }
 
     #[test]
+    fn parse_object_single_pair_with_empty_string()
+    {
+        let key = String::from("key");
+        let input = String::from("{ \"key\": \"\" }");
+        let mut parser = Parser::new_copy(&input);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::OBJECT);
+
+        let node_object = rnode.downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_object.is_empty());
+        assert_eq!(node_object.len(), 1);
+
+        let opt_rnode_value = node_object.get(&key);
+        assert!(opt_rnode_value.is_some());
+
+        let rnode_value = opt_rnode_value.unwrap().downcast_rc::<RNodeString>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(rnode_value.get_value(), "");
+    }
+
+    #[test]
     fn parse_object_double_pair()
     {
         let key0 = String::from("key0");

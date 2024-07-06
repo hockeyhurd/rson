@@ -366,12 +366,7 @@ fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, Stri
         }
     }
 
-    if inst.buffer.empty()
-    {
-        return Err(String::from("Logic error in handling string"));
-    }
-
-    else if !saw_close_quote
+    if !saw_close_quote
     {
         return Err(String::from("Error: Missing closing double-quote ('\"')."));
     }
