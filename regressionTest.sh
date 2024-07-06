@@ -7,13 +7,15 @@ if [ -z "$1" ]; then
     TEST_DIR='tests'
 fi
 
+# Note: In cargo, there is no '--debug' but only '--release'.
+# Since we default to running in debug, we simply set this to
+# an empty string.
 if [ -z "$2" ]; then
-    # Note: In cargo, there is no '--debug' but only '--release'.
-    # Since we default to running in debug, we simply set this to
-    # an empty string.
     BUILD_TYPE=''
 elif [ "$2" == "debug" ]; then
     BUILD_TYPE=''
+elif [ "$2" == "release" ]; then
+    BUILD_TYPE='--release'
 else
     echo "Un-supported build type."
     exit -1

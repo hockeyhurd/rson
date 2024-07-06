@@ -7,6 +7,7 @@ use std::rc::Rc;
 pub struct RsonReader
 {
     parser: RefCell<Parser>,
+    #[allow(dead_code)]
     pub file_path: Option<String>,
 }
 
