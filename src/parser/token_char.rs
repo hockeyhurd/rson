@@ -60,12 +60,12 @@ impl TokenTrait for TokenChar
 
     fn is_bool(&self) -> bool
     {
-        true
+        false
     }
 
     fn is_char(&self) -> bool
     {
-        false
+        true
     }
 
     fn is_double(&self) -> bool

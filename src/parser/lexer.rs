@@ -2,6 +2,7 @@
 use crate::parser::snapshot::Snapshot;
 use crate::parser::token::TokenTrait;
 use crate::parser::token_bool::TokenBool;
+use crate::parser::token_char::TokenChar;
 use crate::parser::token_double::TokenDouble;
 use crate::parser::token_string::TokenString;
 use crate::parser::token_symbol::TokenSymbol;
@@ -17,6 +18,7 @@ pub struct Lexer
     input: String,
     index: usize,
     lookup_table: HashMap<char, fn(&mut Lexer, char) -> Result<Rc<dyn TokenTrait>, String>>,
+    escape_char_table: HashMap<char, char>,
     buffer: StringBuilder,
 }
 
@@ -24,7 +26,13 @@ impl Lexer
 {
     pub fn new_copy(input: &String) -> Self
     {
-        let mut result = Self { input: input.clone(), index: 0, lookup_table: HashMap::new(), buffer: StringBuilder::new(4096) };
+        let mut result = Self
+        {
+            input: input.clone(), index: 0,
+            lookup_table: HashMap::new(), escape_char_table: HashMap::new(),
+            buffer: StringBuilder::new(4096)
+        };
+
         result.init_table();
 
         return result;
@@ -32,7 +40,13 @@ impl Lexer
 
     pub fn new_move(input: String) -> Self
     {
-        let mut result = Self { input: input, index: 0, lookup_table: HashMap::new(), buffer: StringBuilder::new(4096) };
+        let mut result = Self
+        {
+            input: input, index: 0,
+            lookup_table: HashMap::new(), escape_char_table: HashMap::new(),
+            buffer: StringBuilder::new(4096)
+        };
+
         result.init_table();
 
         return result;
@@ -65,6 +79,12 @@ impl Lexer
         {
             self.lookup_table.insert(char::from_digit(i, 10).expect("Failed to convert 'i' to a char"), handle_number);
         }
+
+        self.escape_char_table.insert('"', '\"');
+        self.escape_char_table.insert('\'', '\'');
+        self.escape_char_table.insert('\\', '\\');
+        self.escape_char_table.insert('n', '\n');
+        self.escape_char_table.insert('r', '\r');
     }
 
     #[allow(dead_code)]
@@ -202,16 +222,12 @@ fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrai
     {
         Some(lookahead) =>
         {
-            let func_opt = inst.lookup_table.get(&lookahead);
+            let opt_escape_char = inst.escape_char_table.get(&lookahead);
 
-            match func_opt
+            match opt_escape_char
             {
-                Some(func) =>
-                {
-                    inst.buffer.append_char(lookahead);
-                    return func(inst, lookahead);
-                },
-                None => { return Err(String::from("Error: Failed to lookup an appropriate handler function")); },
+                Some(escape_char) => { return Ok(Rc::new(TokenChar::new(*escape_char))); },
+                None => { return Err(String::from("Error: Not a supported escape sequence")); },
             }
         },
         None => { return Err(String::from("Error: failed lookahead")); },
@@ -333,7 +349,14 @@ fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, Stri
                 {
                     if last_was_escape
                     {
-                        inst.buffer.append_char(cur_char);
+                        let opt_escape_char = inst.escape_char_table.get(&cur_char);
+
+                        match opt_escape_char
+                        {
+                            Some(escape_char) => { inst.buffer.append_char(*escape_char); },
+                            None => { return Err(String::from("Error not a supported escape character")); },
+                        }
+
                         last_was_escape = false;
                     }
 
@@ -341,6 +364,19 @@ fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, Stri
                     {
                         last_was_escape = true;
                     }
+                }
+
+                else if last_was_escape
+                {
+                    let opt_escape_char = inst.escape_char_table.get(&cur_char);
+
+                    match opt_escape_char
+                    {
+                        Some(escape_char) => { inst.buffer.append_char(*escape_char); },
+                        None => { return Err(String::from("Error not a supported escape character")); },
+                    }
+
+                    last_was_escape = false;
                 }
 
                 else if cur_char == '"'
@@ -1239,6 +1275,86 @@ mod tests
             assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
             assert!(token.is_symbol());
             assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_newline()
+    {
+        let first_token = '\n';
+        let input = String::from("\\n");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::CHAR);
+            assert!(token.is_char());
+            assert_eq!(token.as_char().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_carriage_return()
+    {
+        let first_token = '\r';
+        let input = String::from("\\r");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::CHAR);
+            assert!(token.is_char());
+            assert_eq!(token.as_char().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_single_quote()
+    {
+        let first_token = '\'';
+        let input = String::from("\\'");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::CHAR);
+            assert!(token.is_char());
+            assert_eq!(token.as_char().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_double_quote()
+    {
+        let first_token = '"';
+        let input = String::from("\\\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::CHAR);
+            assert!(token.is_char());
+            assert_eq!(token.as_char().unwrap(), first_token);
         }
 
         token_result = lexer.next_token();
