@@ -2,7 +2,6 @@
 use crate::parser::snapshot::Snapshot;
 use crate::parser::token::TokenTrait;
 use crate::parser::token_bool::TokenBool;
-use crate::parser::token_char::TokenChar;
 use crate::parser::token_double::TokenDouble;
 use crate::parser::token_string::TokenString;
 use crate::parser::token_symbol::TokenSymbol;
@@ -54,7 +53,6 @@ impl Lexer
 
     fn init_table(&mut self)
     {
-        self.lookup_table.insert('\\', handle_leading_escape);
         self.lookup_table.insert('.', handle_number);
         self.lookup_table.insert('-', handle_number);
         self.lookup_table.insert('"', handle_string);
@@ -81,10 +79,13 @@ impl Lexer
         }
 
         self.escape_char_table.insert('"', '\"');
-        self.escape_char_table.insert('\'', '\'');
+        self.escape_char_table.insert('/', '/');
         self.escape_char_table.insert('\\', '\\');
+        self.escape_char_table.insert('b', '\x08');
+        self.escape_char_table.insert('f', '\x0C');
         self.escape_char_table.insert('n', '\n');
         self.escape_char_table.insert('r', '\r');
+        self.escape_char_table.insert('t', '\t');
     }
 
     #[allow(dead_code)]
@@ -109,13 +110,11 @@ impl Lexer
         return Err("Out of tokens".to_string());
     }
 
-    #[allow(dead_code)]
     pub fn restore(&mut self, snapshot: &Snapshot)
     {
         self.index = snapshot.get_start_pos();
     }
 
-    #[allow(dead_code)]
     pub fn snap(&self) -> Snapshot
     {
         return Snapshot::new(self.index);
@@ -214,7 +213,8 @@ impl Lexer
     }
 }
 
-fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
+// @@@ Re-use or remove. Commenting out for now...
+/*fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
     let lookahead_opt = inst.next_char();
 
@@ -232,7 +232,7 @@ fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrai
         },
         None => { return Err(String::from("Error: failed lookahead")); },
     }
-}
+}*/
 
 fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
@@ -368,12 +368,72 @@ fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, Stri
 
                 else if last_was_escape
                 {
-                    let opt_escape_char = inst.escape_char_table.get(&cur_char);
-
-                    match opt_escape_char
+                    // Special case for unicode since '\u' isn't a valid char in rust (understandably).
+                    // TODO: Can we refactor this to take advantage of using the 'escape_char_table'??
+                    if cur_char == 'u'
                     {
-                        Some(escape_char) => { inst.buffer.append_char(*escape_char); },
-                        None => { return Err(String::from("Error not a supported escape character")); },
+                        const UNICODE_LEN: usize = 4;
+                        const ERROR_MSG: &str = "Error invalid unicode character in sequence";
+
+                        // Create a temporary small array to store ascii hexadecimal characters.
+                        let mut temp_arr: [char; 4] = ['\0'; 4];
+                        let mut count: usize = 0;
+
+                        for _ in 0..UNICODE_LEN
+                        {
+                            let opt_char_next = inst.next_char();
+
+                            match opt_char_next
+                            {
+                                Some(mut char_next) =>
+                                {
+                                    if (char_next >= '0' && char_next <= '9') ||
+                                       (char_next >= 'A' && char_next <= 'F') ||
+                                       (char_next >= 'a' && char_next <= 'f')
+                                    {
+                                        if char_next >= 'a' && char_next <= 'f'
+                                        {
+                                            char_next.make_ascii_uppercase();
+                                        }
+
+                                        temp_arr[count] = char_next;
+                                        count += 1;
+                                    }
+
+                                    else
+                                    {
+                                        return Err(String::from(ERROR_MSG));
+                                    }
+                                },
+                                None => { return Err(String::from(ERROR_MSG)); },
+                            }
+                        }
+
+                        // Verify the length
+                        if count != UNICODE_LEN
+                        {
+                            return Err(String::from("Error unicode character length is not equal to '4'"));
+                        }
+
+                        // Include escape sequence
+                        inst.buffer.append_str("\\u");
+
+                        // Commit to buffer
+                        for ch in temp_arr
+                        {
+                            inst.buffer.append_char(ch);
+                        }
+                    }
+
+                    else
+                    {
+                        let opt_escape_char = inst.escape_char_table.get(&cur_char);
+
+                        match opt_escape_char
+                        {
+                            Some(escape_char) => { inst.buffer.append_char(*escape_char); },
+                            None => { return Err(String::from("Error not a supported escape character")); },
+                        }
                     }
 
                     last_was_escape = false;
@@ -578,6 +638,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -586,6 +647,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -607,6 +669,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -616,6 +679,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -625,6 +689,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -647,6 +712,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -656,6 +722,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -665,6 +732,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -684,6 +752,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -693,6 +762,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -702,6 +772,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -724,6 +795,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -733,6 +805,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -742,6 +815,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -762,6 +836,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -793,6 +868,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -802,6 +878,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -811,6 +888,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -833,6 +911,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -842,6 +921,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -851,6 +931,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -873,6 +954,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -882,6 +964,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -891,6 +974,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -913,6 +997,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -922,6 +1007,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -931,6 +1017,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -953,6 +1040,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -962,6 +1050,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -971,6 +1060,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -991,6 +1081,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1011,6 +1102,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1031,6 +1123,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1051,6 +1144,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1071,6 +1165,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1093,6 +1188,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1102,6 +1198,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1111,6 +1208,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1133,6 +1231,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1142,6 +1241,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1151,6 +1251,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1172,6 +1273,7 @@ mod tests
         let mut lexer = Lexer::new_move(input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1181,6 +1283,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1189,6 +1292,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1211,6 +1315,7 @@ mod tests
         let mut lexer = Lexer::new_move(input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1220,6 +1325,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1229,112 +1335,13 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
             assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
             assert!(token.is_symbol());
             assert_eq!(token.as_symbol().unwrap(), &third_token);
-        }
-
-        token_result = lexer.next_token();
-        assert!(token_result.is_err());
-    }
-
-    #[test]
-    fn lex_escape_characters()
-    {
-        let first_token = String::from("{");
-        let second_token = String::from("\"Hi\"");
-        let third_token = String::from("}");
-        let input = String::from("{ \"\\\"Hi\\\"\" }");
-        let mut lexer = Lexer::new_copy(&input);
-
-        let mut token_result = lexer.next_token();
-
-        {
-            let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
-            assert!(token.is_symbol());
-            assert_eq!(token.as_symbol().unwrap(), &first_token);
-        }
-
-        token_result = lexer.next_token();
-
-        {
-            let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::STRING);
-            assert!(token.is_string());
-            assert_eq!(token.as_string().unwrap(), &second_token);
-        }
-
-        token_result = lexer.next_token();
-
-        {
-            let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
-            assert!(token.is_symbol());
-            assert_eq!(token.as_symbol().unwrap(), &third_token);
-        }
-
-        token_result = lexer.next_token();
-        assert!(token_result.is_err());
-    }
-
-    #[test]
-    fn lex_escape_newline()
-    {
-        let first_token = '\n';
-        let input = String::from("\\n");
-        let mut lexer = Lexer::new_copy(&input);
-
-        let mut token_result = lexer.next_token();
-
-        {
-            let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::CHAR);
-            assert!(token.is_char());
-            assert_eq!(token.as_char().unwrap(), first_token);
-        }
-
-        token_result = lexer.next_token();
-        assert!(token_result.is_err());
-    }
-
-    #[test]
-    fn lex_escape_carriage_return()
-    {
-        let first_token = '\r';
-        let input = String::from("\\r");
-        let mut lexer = Lexer::new_copy(&input);
-
-        let mut token_result = lexer.next_token();
-
-        {
-            let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::CHAR);
-            assert!(token.is_char());
-            assert_eq!(token.as_char().unwrap(), first_token);
-        }
-
-        token_result = lexer.next_token();
-        assert!(token_result.is_err());
-    }
-
-    #[test]
-    fn lex_escape_single_quote()
-    {
-        let first_token = '\'';
-        let input = String::from("\\'");
-        let mut lexer = Lexer::new_copy(&input);
-
-        let mut token_result = lexer.next_token();
-
-        {
-            let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::CHAR);
-            assert!(token.is_char());
-            assert_eq!(token.as_char().unwrap(), first_token);
         }
 
         token_result = lexer.next_token();
@@ -1344,20 +1351,294 @@ mod tests
     #[test]
     fn lex_escape_double_quote()
     {
-        let first_token = '"';
-        let input = String::from("\\\"");
+        let first_token = "\"";
+        let input = String::from("\"\\\"\"");
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::CHAR);
-            assert!(token.is_char());
-            assert_eq!(token.as_char().unwrap(), first_token);
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_forward_slash()
+    {
+        let first_token = "/";
+        let input = String::from("\"\\/\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_multi_backslash_characters()
+    {
+        let first_token = String::from("{");
+        let second_token = String::from("\"Hi\"");
+        let third_token = String::from("}");
+        let input = String::from("{ \"\\\"Hi\\\"\" }");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), &second_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::SYMBOL);
+            assert!(token.is_symbol());
+            assert_eq!(token.as_symbol().unwrap(), &third_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_backspace()
+    {
+        let first_token = "\x08";
+        let input = String::from("\"\\b\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_form_feed()
+    {
+        let first_token = "\x0C";
+        let input = String::from("\"\\f\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_newline()
+    {
+        let first_token = "\n";
+        let input = String::from("\"\\n\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_carriage_return()
+    {
+        let first_token = "\r";
+        let input = String::from("\"\\r\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_tab()
+    {
+        let first_token = "\t";
+        let input = String::from("\"\\t\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_single_quote_invalid()
+    {
+        let input = String::from("\\'");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_checkmark_min_value_valid()
+    {
+        let first_token = "\\u0000";
+        let input = String::from("\"\\u0000\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_checkmark_max_value_valid()
+    {
+        let first_token = "\\uFFFF";
+        let input = String::from("\"\\uFFFF\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_checkmark_valid()
+    {
+        let first_token = "\\u2713";
+        let input = String::from("\"\\u2713\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_mix_casing_does_to_upper_and_is_valid()
+    {
+        let first_token = "\\uBEEF";
+        let input = String::from("\"\\uBeeF\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_not_enough_hex_digits_invalid()
+    {
+        let input = String::from("\"\\u271\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let token_result = lexer.next_token();
         assert!(token_result.is_err());
     }
 
@@ -1373,6 +1654,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1382,6 +1664,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1391,6 +1674,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1400,6 +1684,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1409,6 +1694,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1437,6 +1723,7 @@ mod tests
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1446,6 +1733,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1455,6 +1743,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1464,6 +1753,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1473,6 +1763,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1482,6 +1773,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1491,6 +1783,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1500,6 +1793,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();
@@ -1509,6 +1803,7 @@ mod tests
         }
 
         token_result = lexer.next_token();
+        assert!(token_result.is_ok());
 
         {
             let token = token_result.unwrap();

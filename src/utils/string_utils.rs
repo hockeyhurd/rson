@@ -10,35 +10,50 @@ impl StringBuilder
         Self { buffer: Vec::with_capacity(capacity) }
     }
 
+    #[inline]
     pub fn get(&self, index: usize) -> Option<&char>
     {
         return self.buffer.get(index);
     }
 
     #[allow(dead_code)]
+    #[inline]
     pub fn get_capacity(&self) -> usize
     {
         return self.buffer.capacity();
     }
 
+    #[inline]
     pub fn empty(&self) -> bool
     {
         return self.buffer.len() == 0;
     }
 
+    #[inline]
     pub fn clear(&mut self)
     {
         self.buffer.clear();
     }
 
+    #[inline]
     pub fn len(&self) -> usize
     {
         return self.buffer.len();
     }
 
+    #[inline]
     pub fn append_char(&mut self, value: char)
     {
         self.buffer.push(value);
+    }
+
+    #[allow(dead_code)]
+    pub fn append_chars(&mut self, value: &Vec<char>)
+    {
+        for ch in value
+        {
+            self.append_char(*ch);
+        }
     }
 
     pub fn append_str(&mut self, value: &str)
@@ -58,6 +73,7 @@ impl StringBuilder
     }
 
     #[allow(dead_code)]
+    #[inline]
     pub fn as_slice(&self) -> &[char]
     {
         return self.buffer.as_slice();
