@@ -1,0 +1,8 @@
+{
+  "english": "Hello",
+  "japanese": "こんにちは",
+  "emoji": "😊",
+  "special_chars": "\"\\/\b\f\n\r\t",
+  "unicode_escape": "\u0041\u0301"
+}
+

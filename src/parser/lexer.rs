@@ -2,7 +2,6 @@
 use crate::parser::snapshot::Snapshot;
 use crate::parser::token::TokenTrait;
 use crate::parser::token_bool::TokenBool;
-use crate::parser::token_char::TokenChar;
 use crate::parser::token_double::TokenDouble;
 use crate::parser::token_string::TokenString;
 use crate::parser::token_symbol::TokenSymbol;
@@ -54,7 +53,6 @@ impl Lexer
 
     fn init_table(&mut self)
     {
-        self.lookup_table.insert('\\', handle_leading_escape);
         self.lookup_table.insert('.', handle_number);
         self.lookup_table.insert('-', handle_number);
         self.lookup_table.insert('"', handle_string);
@@ -81,10 +79,13 @@ impl Lexer
         }
 
         self.escape_char_table.insert('"', '\"');
-        self.escape_char_table.insert('\'', '\'');
+        self.escape_char_table.insert('/', '/');
         self.escape_char_table.insert('\\', '\\');
+        self.escape_char_table.insert('b', '\x08');
+        self.escape_char_table.insert('f', '\x0C');
         self.escape_char_table.insert('n', '\n');
         self.escape_char_table.insert('r', '\r');
+        self.escape_char_table.insert('t', '\t');
     }
 
     #[allow(dead_code)]
@@ -212,7 +213,8 @@ impl Lexer
     }
 }
 
-fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
+// @@@ Re-use or remove. Commenting out for now...
+/*fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
     let lookahead_opt = inst.next_char();
 
@@ -230,7 +232,7 @@ fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrai
         },
         None => { return Err(String::from("Error: failed lookahead")); },
     }
-}
+}*/
 
 fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
@@ -367,6 +369,7 @@ fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, Stri
                 else if last_was_escape
                 {
                     // Special case for unicode since '\u' isn't a valid char in rust (understandably).
+                    // TODO: Can we refactor this to take advantage of using the 'escape_char_table'??
                     if cur_char == 'u'
                     {
                         const UNICODE_LEN: usize = 4;
@@ -1346,7 +1349,49 @@ mod tests
     }
 
     #[test]
-    fn lex_escape_characters()
+    fn lex_escape_double_quote()
+    {
+        let first_token = "\"";
+        let input = String::from("\"\\\"\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_forward_slash()
+    {
+        let first_token = "/";
+        let input = String::from("\"\\/\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_multi_backslash_characters()
     {
         let first_token = String::from("{");
         let second_token = String::from("\"Hi\"");
@@ -1389,10 +1434,10 @@ mod tests
     }
 
     #[test]
-    fn lex_escape_newline()
+    fn lex_escape_backspace()
     {
-        let first_token = '\n';
-        let input = String::from("\\n");
+        let first_token = "\x08";
+        let input = String::from("\"\\b\"");
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
@@ -1400,9 +1445,51 @@ mod tests
 
         {
             let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::CHAR);
-            assert!(token.is_char());
-            assert_eq!(token.as_char().unwrap(), first_token);
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_form_feed()
+    {
+        let first_token = "\x0C";
+        let input = String::from("\"\\f\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_newline()
+    {
+        let first_token = "\n";
+        let input = String::from("\"\\n\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
         }
 
         token_result = lexer.next_token();
@@ -1412,8 +1499,8 @@ mod tests
     #[test]
     fn lex_escape_carriage_return()
     {
-        let first_token = '\r';
-        let input = String::from("\\r");
+        let first_token = "\r";
+        let input = String::from("\"\\r\"");
         let mut lexer = Lexer::new_copy(&input);
 
         let mut token_result = lexer.next_token();
@@ -1421,9 +1508,9 @@ mod tests
 
         {
             let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::CHAR);
-            assert!(token.is_char());
-            assert_eq!(token.as_char().unwrap(), first_token);
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
         }
 
         token_result = lexer.next_token();
@@ -1431,44 +1518,33 @@ mod tests
     }
 
     #[test]
-    fn lex_escape_single_quote()
+    fn lex_escape_tab()
     {
-        let first_token = '\'';
+        let first_token = "\t";
+        let input = String::from("\"\\t\"");
+        let mut lexer = Lexer::new_copy(&input);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_single_quote_invalid()
+    {
         let input = String::from("\\'");
         let mut lexer = Lexer::new_copy(&input);
 
-        let mut token_result = lexer.next_token();
-        assert!(token_result.is_ok());
-
-        {
-            let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::CHAR);
-            assert!(token.is_char());
-            assert_eq!(token.as_char().unwrap(), first_token);
-        }
-
-        token_result = lexer.next_token();
-        assert!(token_result.is_err());
-    }
-
-    #[test]
-    fn lex_escape_double_quote()
-    {
-        let first_token = '"';
-        let input = String::from("\\\"");
-        let mut lexer = Lexer::new_copy(&input);
-
-        let mut token_result = lexer.next_token();
-        assert!(token_result.is_ok());
-
-        {
-            let token = token_result.unwrap();
-            assert_eq!(token.get_type(), EnumTokenType::CHAR);
-            assert!(token.is_char());
-            assert_eq!(token.as_char().unwrap(), first_token);
-        }
-
-        token_result = lexer.next_token();
+        let token_result = lexer.next_token();
         assert!(token_result.is_err());
     }
 
