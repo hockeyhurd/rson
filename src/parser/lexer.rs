@@ -1693,7 +1693,7 @@ mod tests
     #[test]
     fn lex_escape_unicode_not_enough_hex_digits_invalid4()
     {
-        let input = String::from("\"\\u2\"");
+        let input = String::from("\"\\u\"");
         let mut lexer = Lexer::new_copy(&input, false);
 
         let token_result = lexer.next_token();
