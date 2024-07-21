@@ -13,16 +13,16 @@ pub struct RsonReader
 
 impl RsonReader
 {
-    pub fn from_file(path: &String) -> Self
+    pub fn from_file(path: &String, stringify: bool) -> Self
     {
         let input = std::fs::read_to_string(&path).expect("Failed to read input file");
-        Self { parser: RefCell::new(Parser::new_move(input)), file_path: Some(path.clone()) }
+        Self { parser: RefCell::new(Parser::new_move(input, stringify)), file_path: Some(path.clone()) }
     }
 
-    pub fn from_stdin() -> Self
+    pub fn from_stdin(stringify: bool) -> Self
     {
         let input = std::io::read_to_string(std::io::stdin()).expect("Failed to read from stdin");
-        Self { parser: RefCell::new(Parser::new_move(input)), file_path: None }
+        Self { parser: RefCell::new(Parser::new_move(input, stringify)), file_path: None }
     }
 
     pub fn parse(&self) -> Result<Rc<dyn RNode>, String>

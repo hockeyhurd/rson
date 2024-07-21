@@ -5,13 +5,14 @@ pub struct CLIArgs
 {
     pub input_file: Option<String>,
     pub log_level: EnumLogLevel,
+    pub stringify: bool,
 }
 
 impl CLIArgs
 {
     pub fn new() -> Self
     {
-        Self { input_file: None, log_level: EnumLogLevel::WARN }
+        Self { input_file: None, log_level: EnumLogLevel::WARN, stringify: false }
     }
 
     fn get_usage(&self) -> String
@@ -92,6 +93,12 @@ impl CLIArgs
                 }
 
                 skip_next = true;
+            }
+
+            else if arg == "-s" || arg == "--stringify"
+            {
+                self.stringify = true;
+                skip_next = false;
             }
 
             else
@@ -274,17 +281,17 @@ mod tests
     fn parse_all_input_expect_valid()
     {
         let file = String::from("myfile.json");
-        let mut args = Vec::<String>::with_capacity(5);
+        let mut args = Vec::<String>::with_capacity(8);
         args.push(String::from("rson"));
         args.push(String::from("--log-level"));
         args.push(String::from("DEBUG"));
         args.push(String::from("--input"));
         args.push(file.clone());
+        args.push(String::from("--stringify"));
 
         let mut cli_args = CLIArgs::new();
 
         let opt_err_pair = cli_args.parse(&args);
-        assert!(opt_err_pair.is_none());
         assert!(opt_err_pair.is_none());
         assert_eq!(cli_args.log_level, EnumLogLevel::DEBUG);
         assert!(cli_args.input_file.is_some());
