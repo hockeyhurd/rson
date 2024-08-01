@@ -214,6 +214,19 @@ impl Lexer
     }
 }
 
+fn decode_char(ch: char) -> u16
+{
+    match ch
+    {
+        '0'..='9' => { return (ch as u16) - ('0' as u16) },
+        'a'..='f' => { return (ch as u16) - ('a' as u16) + 10},
+        'A'..='F' => { return (ch as u16) - ('A' as u16) + 10},
+        _ => { assert!(false); }
+    }
+
+    return 0;
+}
+
 // @@@ Re-use or remove. Commenting out for now...
 /*fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
@@ -419,10 +432,10 @@ fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, Stri
                         if inst.stringify
                         {
                             let mut temp_arr_u16: [u16; 1] = [0; 1];
-                            temp_arr_u16[0] = ((temp_arr[0] as u16) - ('0' as u16)) << 12;
-                            temp_arr_u16[0] |= ((temp_arr[1] as u16) - ('0' as u16)) << 8;
-                            temp_arr_u16[0] |= ((temp_arr[2] as u16) - ('0' as u16)) << 4;
-                            temp_arr_u16[0] |= (temp_arr[3] as u16) - ('0' as u16);
+                            temp_arr_u16[0] = decode_char(temp_arr[0]) << 12;
+                            temp_arr_u16[0] |= decode_char(temp_arr[1]) << 8;
+                            temp_arr_u16[0] |= decode_char(temp_arr[2]) << 4;
+                            temp_arr_u16[0] |= decode_char(temp_arr[3]);
 
                             let conv_str: String = String::from_utf16(&temp_arr_u16).expect("Failed to convert character from UTF-16 to UTF-8");
                             let _ = inst.buffer.append_string(&conv_str);
@@ -1663,6 +1676,27 @@ mod tests
     {
         let first_token = "✓";
         let input = String::from("\"\\u2713\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_pound_and_stringify()
+    {
+        let first_token = "£";
+        let input = String::from("\"\\u00A3\"");
         let mut lexer = Lexer::new_copy(&input, true);
 
         let mut token_result = lexer.next_token();
