@@ -214,13 +214,13 @@ impl Lexer
     }
 }
 
-fn decode_char(ch: char) -> u16
+fn decode_char(ch: char) -> u32
 {
     match ch
     {
-        '0'..='9' => { return (ch as u16) - ('0' as u16) },
-        'a'..='f' => { return (ch as u16) - ('a' as u16) + 10},
-        'A'..='F' => { return (ch as u16) - ('A' as u16) + 10},
+        '0'..='9' => { return (ch as u32) - ('0' as u32) },
+        'a'..='f' => { return (ch as u32) - ('a' as u32) + 10},
+        'A'..='F' => { return (ch as u32) - ('A' as u32) + 10},
         _ => { assert!(false); }
     }
 
@@ -431,14 +431,13 @@ fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, Stri
 
                         if inst.stringify
                         {
-                            let mut temp_arr_u16: [u16; 1] = [0; 1];
-                            temp_arr_u16[0] = decode_char(temp_arr[0]) << 12;
-                            temp_arr_u16[0] |= decode_char(temp_arr[1]) << 8;
-                            temp_arr_u16[0] |= decode_char(temp_arr[2]) << 4;
-                            temp_arr_u16[0] |= decode_char(temp_arr[3]);
+                            let mut temp_utf16 = decode_char(temp_arr[0]) << 12;
+                            temp_utf16 |= decode_char(temp_arr[1]) << 8;
+                            temp_utf16 |= decode_char(temp_arr[2]) << 4;
+                            temp_utf16 |= decode_char(temp_arr[3]);
 
-                            let conv_str: String = String::from_utf16(&temp_arr_u16).expect("Failed to convert character from UTF-16 to UTF-8");
-                            let _ = inst.buffer.append_string(&conv_str);
+                            let conv_ch = std::char::from_u32(temp_utf16).expect("Failed to convert character from UTF-16 to UTF-8");
+                            let _ = inst.buffer.append_char(conv_ch);
                         }
 
                         else
@@ -1672,6 +1671,36 @@ mod tests
     }
 
     #[test]
+    fn lex_escape_unicode_not_enough_hex_digits_invalid2()
+    {
+        let input = String::from("\"\\u21\"");
+        let mut lexer = Lexer::new_copy(&input, false);
+
+        let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_not_enough_hex_digits_invalid3()
+    {
+        let input = String::from("\"\\u2\"");
+        let mut lexer = Lexer::new_copy(&input, false);
+
+        let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_not_enough_hex_digits_invalid4()
+    {
+        let input = String::from("\"\\u2\"");
+        let mut lexer = Lexer::new_copy(&input, false);
+
+        let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
     fn lex_escape_unicode_checkmark_and_stringify()
     {
         let first_token = "✓";
@@ -1708,6 +1737,82 @@ mod tests
             assert!(token.is_string());
             assert_eq!(token.as_string().unwrap(), first_token);
         }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_abcd_and_stringify()
+    {
+        let first_token = "ꯍ";
+        let input = String::from("\"\\uaBcD\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_beef_and_stringify()
+    {
+        let first_token = "뻯";
+        let input = String::from("\"\\uBeeF\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_four_zeroes_stringify()
+    {
+        let first_token = " ";
+        let input = String::from("\"\\u0000\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_four_zs_stringify_invalid()
+    {
+        let input = String::from("\"\\uzzZZ\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_err());
 
         token_result = lexer.next_token();
         assert!(token_result.is_err());
