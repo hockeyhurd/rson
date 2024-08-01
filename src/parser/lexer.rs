@@ -15,6 +15,7 @@ use super::token_null::TokenNull;
 pub struct Lexer
 {
     input: String,
+    stringify: bool,
     index: usize,
     lookup_table: HashMap<char, fn(&mut Lexer, char) -> Result<Rc<dyn TokenTrait>, String>>,
     escape_char_table: HashMap<char, char>,
@@ -23,11 +24,11 @@ pub struct Lexer
 
 impl Lexer
 {
-    pub fn new_copy(input: &String) -> Self
+    pub fn new_copy(input: &String, stringify: bool) -> Self
     {
         let mut result = Self
         {
-            input: input.clone(), index: 0,
+            input: input.clone(), stringify: stringify, index: 0,
             lookup_table: HashMap::new(), escape_char_table: HashMap::new(),
             buffer: StringBuilder::new(4096)
         };
@@ -37,11 +38,11 @@ impl Lexer
         return result;
     }
 
-    pub fn new_move(input: String) -> Self
+    pub fn new_move(input: String, stringify: bool) -> Self
     {
         let mut result = Self
         {
-            input: input, index: 0,
+            input: input, stringify: stringify, index: 0,
             lookup_table: HashMap::new(), escape_char_table: HashMap::new(),
             buffer: StringBuilder::new(4096)
         };
@@ -211,6 +212,19 @@ impl Lexer
         delta = self.index - delta;
         return delta;
     }
+}
+
+fn decode_char(ch: char) -> u32
+{
+    match ch
+    {
+        '0'..='9' => { return (ch as u32) - ('0' as u32) },
+        'a'..='f' => { return (ch as u32) - ('a' as u32) + 10},
+        'A'..='F' => { return (ch as u32) - ('A' as u32) + 10},
+        _ => { assert!(false); }
+    }
+
+    return 0;
 }
 
 // @@@ Re-use or remove. Commenting out for now...
@@ -415,13 +429,27 @@ fn handle_string(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, Stri
                             return Err(String::from("Error unicode character length is not equal to '4'"));
                         }
 
-                        // Include escape sequence
-                        inst.buffer.append_str("\\u");
-
-                        // Commit to buffer
-                        for ch in temp_arr
+                        if inst.stringify
                         {
-                            inst.buffer.append_char(ch);
+                            let mut temp_utf16 = decode_char(temp_arr[0]) << 12;
+                            temp_utf16 |= decode_char(temp_arr[1]) << 8;
+                            temp_utf16 |= decode_char(temp_arr[2]) << 4;
+                            temp_utf16 |= decode_char(temp_arr[3]);
+
+                            let conv_ch = std::char::from_u32(temp_utf16).expect("Failed to convert character from UTF-16 to UTF-8");
+                            let _ = inst.buffer.append_char(conv_ch);
+                        }
+
+                        else
+                        {
+                            // Include escape sequence
+                            inst.buffer.append_str("\\u");
+
+                            // Commit to buffer
+                            for ch in temp_arr
+                            {
+                                inst.buffer.append_char(ch);
+                            }
                         }
                     }
 
@@ -623,7 +651,7 @@ mod tests
     fn lex_accepts_empty_input()
     {
         let input = String::from("");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let token_result = lexer.next_token();
         assert!(token_result.is_err());
@@ -635,7 +663,7 @@ mod tests
         let input = String::from(" { } ");
         let first_token = String::from("{");
         let second_token = String::from("}");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -666,7 +694,7 @@ mod tests
         let second_token = true;
         let third_token = String::from("}");
         let input = String::from("{ true }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -709,7 +737,7 @@ mod tests
         let second_token = false;
         let third_token = String::from("}");
         let input = String::from("{ false }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -749,7 +777,7 @@ mod tests
         let second_token = 123.45;
         let third_token = String::from("}");
         let input = String::from("{ 123.45 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -792,7 +820,7 @@ mod tests
         let second_token = -123.45;
         let third_token = String::from("}");
         let input = String::from("{ -123.45 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -833,7 +861,7 @@ mod tests
     {
         let first_token = String::from("{");
         let input = String::from("{ +123.45 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -853,7 +881,7 @@ mod tests
     fn lex_token_double_neg_double_fails()
     {
         let input = String::from("--123.45");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
         let token_result = lexer.next_token();
         assert!(token_result.is_err());
     }
@@ -865,7 +893,7 @@ mod tests
         let second_token = 123.45E10;
         let third_token = String::from("}");
         let input = String::from("{ 123.45E10 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -908,7 +936,7 @@ mod tests
         let second_token = -123.45E10;
         let third_token = String::from("}");
         let input = String::from("{ -123.45E10 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -951,7 +979,7 @@ mod tests
         let second_token = -0.01;
         let third_token = String::from("}");
         let input = String::from("{ -0.01 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -994,7 +1022,7 @@ mod tests
         let second_token = 1.0e10;
         let third_token = String::from("}");
         let input = String::from("{ 1.0e10 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1037,7 +1065,7 @@ mod tests
         let second_token = 1.5e-10;
         let third_token = String::from("}");
         let input = String::from("{ 1.5e-10 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1078,7 +1106,7 @@ mod tests
     {
         let first_token = String::from("{");
         let input = String::from("{ 1.0e10.5 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1099,7 +1127,7 @@ mod tests
     {
         let first_token = String::from("{");
         let input = String::from("{ 1.0e--10 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1120,7 +1148,7 @@ mod tests
     {
         let first_token = String::from("{");
         let input = String::from("{ -.- }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1141,7 +1169,7 @@ mod tests
     {
         let first_token = String::from("{");
         let input = String::from("{ -5.-5 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1162,7 +1190,7 @@ mod tests
     {
         let first_token = String::from("{");
         let input = String::from("{ - }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1185,7 +1213,7 @@ mod tests
         let second_token = 0.45;
         let third_token = String::from("}");
         let input = String::from("{ .45 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1228,7 +1256,7 @@ mod tests
         let second_token = -123.45;
         let third_token = String::from("}");
         let input = String::from("{ -123.45 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1270,7 +1298,7 @@ mod tests
         let first_token = String::from("{");
         let third_token = String::from("}");
         let input = String::from("{ null }");
-        let mut lexer = Lexer::new_move(input);
+        let mut lexer = Lexer::new_move(input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1312,7 +1340,7 @@ mod tests
         let second_token = String::from("Hi");
         let third_token = String::from("}");
         let input = String::from("{ \"Hi\" }");
-        let mut lexer = Lexer::new_move(input);
+        let mut lexer = Lexer::new_move(input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1353,7 +1381,7 @@ mod tests
     {
         let first_token = "\"";
         let input = String::from("\"\\\"\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1374,7 +1402,7 @@ mod tests
     {
         let first_token = "/";
         let input = String::from("\"\\/\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1397,7 +1425,7 @@ mod tests
         let second_token = String::from("\"Hi\"");
         let third_token = String::from("}");
         let input = String::from("{ \"\\\"Hi\\\"\" }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1438,7 +1466,7 @@ mod tests
     {
         let first_token = "\x08";
         let input = String::from("\"\\b\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1459,7 +1487,7 @@ mod tests
     {
         let first_token = "\x0C";
         let input = String::from("\"\\f\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1480,7 +1508,7 @@ mod tests
     {
         let first_token = "\n";
         let input = String::from("\"\\n\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1501,7 +1529,7 @@ mod tests
     {
         let first_token = "\r";
         let input = String::from("\"\\r\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1522,7 +1550,7 @@ mod tests
     {
         let first_token = "\t";
         let input = String::from("\"\\t\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1542,7 +1570,7 @@ mod tests
     fn lex_escape_single_quote_invalid()
     {
         let input = String::from("\\'");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let token_result = lexer.next_token();
         assert!(token_result.is_err());
@@ -1553,7 +1581,7 @@ mod tests
     {
         let first_token = "\\u0000";
         let input = String::from("\"\\u0000\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1574,7 +1602,7 @@ mod tests
     {
         let first_token = "\\uFFFF";
         let input = String::from("\"\\uFFFF\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1595,7 +1623,7 @@ mod tests
     {
         let first_token = "\\u2713";
         let input = String::from("\"\\u2713\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1616,7 +1644,7 @@ mod tests
     {
         let first_token = "\\uBEEF";
         let input = String::from("\"\\uBeeF\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1636,9 +1664,157 @@ mod tests
     fn lex_escape_unicode_not_enough_hex_digits_invalid()
     {
         let input = String::from("\"\\u271\"");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_not_enough_hex_digits_invalid2()
+    {
+        let input = String::from("\"\\u21\"");
+        let mut lexer = Lexer::new_copy(&input, false);
+
+        let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_not_enough_hex_digits_invalid3()
+    {
+        let input = String::from("\"\\u2\"");
+        let mut lexer = Lexer::new_copy(&input, false);
+
+        let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_not_enough_hex_digits_invalid4()
+    {
+        let input = String::from("\"\\u2\"");
+        let mut lexer = Lexer::new_copy(&input, false);
+
+        let token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_checkmark_and_stringify()
+    {
+        let first_token = "✓";
+        let input = String::from("\"\\u2713\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_pound_and_stringify()
+    {
+        let first_token = "£";
+        let input = String::from("\"\\u00A3\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_abcd_and_stringify()
+    {
+        let first_token = "ꯍ";
+        let input = String::from("\"\\uaBcD\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_beef_and_stringify()
+    {
+        let first_token = "뻯";
+        let input = String::from("\"\\uBeeF\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_four_zeroes_stringify()
+    {
+        let first_token = " ";
+        let input = String::from("\"\\u0000\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_ok());
+
+        {
+            let token = token_result.unwrap();
+            assert_eq!(token.get_type(), EnumTokenType::STRING);
+            assert!(token.is_string());
+            assert_eq!(token.as_string().unwrap(), first_token);
+        }
+
+        token_result = lexer.next_token();
+        assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_four_zs_stringify_invalid()
+    {
+        let input = String::from("\"\\uzzZZ\"");
+        let mut lexer = Lexer::new_copy(&input, true);
+
+        let mut token_result = lexer.next_token();
+        assert!(token_result.is_err());
+
+        token_result = lexer.next_token();
         assert!(token_result.is_err());
     }
 
@@ -1651,7 +1827,7 @@ mod tests
         let fourth_token = String::from("value");
         let fifth_token = String::from("}");
         let input = String::from("{ \"key\": \"value\" }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());
@@ -1720,7 +1896,7 @@ mod tests
         let eighth_token: f64 = 456.0;
         let ninth_token = String::from("}");
         let input = String::from("{ \"1\": 123, \"2\": 456 }");
-        let mut lexer = Lexer::new_copy(&input);
+        let mut lexer = Lexer::new_copy(&input, false);
 
         let mut token_result = lexer.next_token();
         assert!(token_result.is_ok());

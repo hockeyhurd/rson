@@ -43,8 +43,8 @@ fn main()
     }
 
     let rson_reader: RsonReader = match cli_args.input_file {
-        Some(input_file) => { RsonReader::from_file(&input_file) },
-        None => { RsonReader::from_stdin() }
+        Some(input_file) => { RsonReader::from_file(&input_file, cli_args.stringify) },
+        None => { RsonReader::from_stdin(cli_args.stringify) }
     };
 
     let root_node_result = rson_reader.parse();
