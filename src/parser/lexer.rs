@@ -227,27 +227,6 @@ fn decode_char(ch: char) -> u32
     return 0;
 }
 
-// @@@ Re-use or remove. Commenting out for now...
-/*fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
-{
-    let lookahead_opt = inst.next_char();
-
-    match lookahead_opt
-    {
-        Some(lookahead) =>
-        {
-            let opt_escape_char = inst.escape_char_table.get(&lookahead);
-
-            match opt_escape_char
-            {
-                Some(escape_char) => { return Ok(Rc::new(TokenChar::new(*escape_char))); },
-                None => { return Err(String::from("Error: Not a supported escape sequence")); },
-            }
-        },
-        None => { return Err(String::from("Error: failed lookahead")); },
-    }
-}*/
-
 fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
     inst.buffer.append_char(ch);
