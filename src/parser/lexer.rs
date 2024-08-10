@@ -227,27 +227,6 @@ fn decode_char(ch: char) -> u32
     return 0;
 }
 
-// @@@ Re-use or remove. Commenting out for now...
-/*fn handle_leading_escape(inst: &mut Lexer, _ch: char) -> Result<Rc<dyn TokenTrait>, String>
-{
-    let lookahead_opt = inst.next_char();
-
-    match lookahead_opt
-    {
-        Some(lookahead) =>
-        {
-            let opt_escape_char = inst.escape_char_table.get(&lookahead);
-
-            match opt_escape_char
-            {
-                Some(escape_char) => { return Ok(Rc::new(TokenChar::new(*escape_char))); },
-                None => { return Err(String::from("Error: Not a supported escape sequence")); },
-            }
-        },
-        None => { return Err(String::from("Error: failed lookahead")); },
-    }
-}*/
-
 fn handle_number(inst: &mut Lexer, ch: char) -> Result<Rc<dyn TokenTrait>, String>
 {
     inst.buffer.append_char(ch);
@@ -1693,7 +1672,7 @@ mod tests
     #[test]
     fn lex_escape_unicode_not_enough_hex_digits_invalid4()
     {
-        let input = String::from("\"\\u2\"");
+        let input = String::from("\"\\u\"");
         let mut lexer = Lexer::new_copy(&input, false);
 
         let token_result = lexer.next_token();
@@ -1803,6 +1782,60 @@ mod tests
 
         token_result = lexer.next_token();
         assert!(token_result.is_err());
+    }
+
+    #[test]
+    fn lex_escape_unicode_random_gen_series_stringify()
+    {
+        let unicode_chars: [char; 16] = [ '뜿', '柹', '裧', 'ꒊ', 'ꍵ', '낸', '깥', '軒',
+                                          '', 'ꇏ', '녢', '枈', '', 'Ꟃ', '쩿', 'ꪶ'
+        ];
+
+        let unicode_raw: [u16; 16] = [ 0xb73f, 0x67f9, 0x88e7, 0xa48a, 0xa375, 0xb0b8, 0xae65, 0x8ed2,
+                                        0xe777, 0xa1cf, 0xb162, 0x6788, 0xf384, 0xa7c2, 0xca7f, 0xaab6
+        ];
+
+        assert_eq!(unicode_chars.len(), unicode_raw.len());
+        let mut input = String::with_capacity(0x10);
+
+        for i in 0..unicode_chars.len()
+        {
+            let ch = *unicode_chars.get(i).expect("missing char");
+            let val = *unicode_raw.get(i).expect("missing raw value");
+
+            input.clear();
+            input.push_str("\"\\u");
+
+            for j in (0..4).rev()
+            {
+                let mut sub_val: u8 = ((val >> (j * 4)) & 0x0F) as u8;
+
+                match sub_val
+                {
+                    0..=9 => { sub_val += '0' as u8; },
+                    0x0A..=0x0F => { sub_val -= 10;  sub_val += 'A' as u8; },
+                    _ => { println!("sub_val: {0}", sub_val); assert!(false); },
+                }
+
+                input.push(sub_val as char);
+            }
+
+            input.push('"');
+
+            let mut lexer = Lexer::new_copy(&input, true);
+            let mut token_result = lexer.next_token();
+            assert!(token_result.is_ok());
+
+            {
+                let token = token_result.unwrap();
+                assert_eq!(token.get_type(), EnumTokenType::STRING);
+                assert!(token.is_string());
+                assert_eq!(token.as_string().unwrap().chars().next().unwrap(), ch);
+            }
+
+            token_result = lexer.next_token();
+            assert!(token_result.is_err());
+        }
     }
 
     #[test]
