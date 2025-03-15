@@ -517,7 +517,7 @@ mod tests
     #[test]
     fn parse_array_with_inner_all_nodes()
     {
-        let input = String::from("[ [ ], true, 123.456, null, \"Hello\" ]");
+        let input = String::from("[ [ ], true, 123.456, null, \"Hello\", { \"key\": false } ]");
         let mut parser = Parser::new_copy(&input, false);
         let node_type_result = parser.parse();
 
@@ -528,7 +528,7 @@ mod tests
 
         let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
         assert!(!node_array.is_empty());
-        assert_eq!(node_array.len(), 5);
+        assert_eq!(node_array.len(), 6);
 
         let opt_sub_array = node_array.get(0);
         assert!(opt_sub_array.is_some());
@@ -557,6 +557,21 @@ mod tests
 
         let node_string = opt_node_string.unwrap().downcast_rc::<RNodeString>().map_err(|_| "Shouldn't happen").unwrap();
         assert_eq!(node_string.get_value(), "Hello");
+
+        let opt_node_object = node_array.get(5);
+        assert!(opt_node_object.is_some());
+
+        let node_obj = opt_node_object.unwrap().downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_obj.is_empty());
+        assert_eq!(node_obj.len(), 1);
+
+        let key = String::from("key");
+        let opt_node_bool2 = node_obj.get(&key);
+        assert!(opt_node_bool2.is_some());
+
+        let node_bool2 = opt_node_bool2.unwrap().downcast_rc::<RNodeBool>().map_err(|_| "Shouldn't happen").unwrap();
+        assert_eq!(node_bool2.get_node_type(), EnumNodeType::BOOL);
+        assert!(!node_bool2.value);
     }
 
     #[test]
