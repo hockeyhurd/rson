@@ -19,6 +19,12 @@ impl RsonReader
         Self { parser: RefCell::new(Parser::new_move(input, stringify)), file_path: Some(path.clone()) }
     }
 
+    #[allow(dead_code)]
+    pub fn from_literal(input: &String, stringify: bool) -> Self
+    {
+        Self { parser: RefCell::new(Parser::new_copy(&input, stringify)), file_path: None }
+    }
+
     pub fn from_stdin(stringify: bool) -> Self
     {
         let input = std::io::read_to_string(std::io::stdin()).expect("Failed to read from stdin");
