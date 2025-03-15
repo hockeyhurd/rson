@@ -313,8 +313,7 @@ fn try_parse_object(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option
                         {
                             nodes.insert(key, Rc::clone(&node_type));
                         },
-                        // None => { println!("Error: expected to parse an RNode type at {0}", snapshot.to_string()); return None; },
-                        None => { println!("Error: expected to parse an RNode type at {0} {1}", snapshot.to_string(), key); return None; },
+                        None => { println!("Error: expected to parse an RNode type at {0} (key: {1})", snapshot.to_string(), key); return None; },
                     }
                 }
             },
