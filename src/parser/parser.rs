@@ -170,6 +170,18 @@ fn try_parse_array(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option<
                         }
                     }
 
+                    // Nested object
+                    else if symbol == "{"
+                    {
+                        let opt_obj_type = try_parse_object(parser, Rc::clone(&peek_token));
+
+                        match opt_obj_type
+                        {
+                            Some(obj_type) => { nodes.push(obj_type); },
+                            None => { return None; },
+                        }
+                    }
+
                     else
                     {
                         // TODO: print error??
@@ -301,7 +313,8 @@ fn try_parse_object(parser: &mut Parser, token_in: Rc<dyn TokenTrait>) -> Option
                         {
                             nodes.insert(key, Rc::clone(&node_type));
                         },
-                        None => { println!("Error: expected to parse an RNode type at {0}", snapshot.to_string()); return None; },
+                        // None => { println!("Error: expected to parse an RNode type at {0}", snapshot.to_string()); return None; },
+                        None => { println!("Error: expected to parse an RNode type at {0} {1}", snapshot.to_string(), key); return None; },
                     }
                 }
             },
@@ -546,6 +559,46 @@ mod tests
         assert_eq!(node_string.get_value(), "Hello");
     }
 
+    #[test]
+    fn parse_array_with_inner_objects()
+    {
+        let input = String::from("[ { \"key\": true }, {} ]");
+        let mut parser = Parser::new_copy(&input, false);
+        let node_type_result = parser.parse();
+
+        assert!(node_type_result.is_ok());
+
+        let rnode = node_type_result.unwrap();
+        assert_eq!(rnode.get_node_type(), EnumNodeType::ARRAY);
+
+        let node_array = rnode.downcast_rc::<RNodeArray>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_array.is_empty());
+        assert_eq!(node_array.len(), 2);
+
+        let opt_obj = node_array.get(0);
+        assert!(opt_obj.is_some());
+
+        let node_object = opt_obj.unwrap().downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(!node_object.is_empty());
+        assert_eq!(node_object.len(), 1);
+
+        let key = String::from("key");
+        let opt_node = node_object.get(&key);
+        assert!(opt_node.is_some());
+
+        let node_bool = opt_node.unwrap();
+        assert_eq!(node_bool.get_node_type(), EnumNodeType::BOOL);
+
+        let opt_rnode_value = node_bool.downcast_rc::<RNodeBool>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(opt_rnode_value.value);
+
+        let opt_sub_array = node_array.get(1);
+        assert!(opt_sub_array.is_some());
+
+        let node_object2 = opt_sub_array.unwrap().downcast_rc::<RNodeObject>().map_err(|_| "Shouldn't happen").unwrap();
+        assert!(node_object2.is_empty());
+        assert_eq!(node_object2.len(), 0);
+    }
 
     #[test]
     fn parse_bool()
