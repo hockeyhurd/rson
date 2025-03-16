@@ -1,5 +1,5 @@
 [package]
-name = "rson"
+name = "ruson"
 version = "0.1.0"
 edition = "2021"
 authors = ["hockeyhurd nhurd96@gmail.com"]
@@ -9,9 +9,9 @@ chrono = "0.4"
 downcast-rs = "1.2.0"
 
 [lib]
-name = "rson"
+name = "ruson"
 path = "src/lib.rs"
 
 [[bin]]
-name = "rson"
+name = "ruson"
 path = "src/main.rs"

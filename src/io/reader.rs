@@ -4,14 +4,14 @@ use crate::rnodes::rnode::RNode;
 use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
 
-pub struct RsonReader
+pub struct RusonReader
 {
     parser: RefCell<Parser>,
     #[allow(dead_code)]
     pub file_path: Option<String>,
 }
 
-impl RsonReader
+impl RusonReader
 {
     pub fn from_file(path: &String, stringify: bool) -> Self
     {
