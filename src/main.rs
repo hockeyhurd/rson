@@ -8,10 +8,10 @@ mod visitor;
 use log::logger::ILogger;
 use utils::cli_args::CLIArgs;
 
-use crate::io::reader::RsonReader;
+use crate::io::reader::RusonReader;
 
 #[allow(unused_imports)]
-use crate::io::writer::RsonWriter;
+use crate::io::writer::RusonWriter;
 
 extern crate chrono;
 
@@ -42,12 +42,12 @@ fn main()
         }
     }
 
-    let rson_reader: RsonReader = match cli_args.input_file {
-        Some(input_file) => { RsonReader::from_file(&input_file, cli_args.stringify) },
-        None => { RsonReader::from_stdin(cli_args.stringify) }
+    let ruson_reader: RusonReader = match cli_args.input_file {
+        Some(input_file) => { RusonReader::from_file(&input_file, cli_args.stringify) },
+        None => { RusonReader::from_stdin(cli_args.stringify) }
     };
 
-    let root_node_result = rson_reader.parse();
+    let root_node_result = ruson_reader.parse();
 
     match root_node_result
     {

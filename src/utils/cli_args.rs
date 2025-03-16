@@ -20,7 +20,7 @@ impl CLIArgs
         let mut builder = StringBuilder::new(1024);
 
         // Usage
-        builder.append_str("Usage: rson\n");
+        builder.append_str("Usage: ruson\n");
         builder.append_str("NOTE: with no supplied arguments, this will read from std input.\n      You may prefer to run from an input file. See '--input' below.\n");
         builder.append_char('\n');
 
@@ -133,7 +133,7 @@ mod tests
     #[test]
     fn parse_empty_input_success()
     {
-        let args: Vec<String> = vec![ String::from("rson"); 1];
+        let args: Vec<String> = vec![ String::from("ruson"); 1];
         let mut cli_args = CLIArgs::new();
 
         let opt_err_pair = cli_args.parse(&args);
@@ -145,7 +145,7 @@ mod tests
     {
         let file = String::from("myfile.json");
         let mut args = Vec::<String>::with_capacity(3);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("--help"));
         args.push(file.clone());
 
@@ -164,7 +164,7 @@ mod tests
     {
         let file = String::from("myfile.json");
         let mut args = Vec::<String>::with_capacity(3);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("-h"));
         args.push(file.clone());
 
@@ -182,7 +182,7 @@ mod tests
     fn parse_one_input_invalid_arg_fail()
     {
         let mut args = Vec::<String>::with_capacity(2);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("--args"));
 
         let mut cli_args = CLIArgs::new();
@@ -195,7 +195,7 @@ mod tests
     fn parse_one_input_missing_value_fail()
     {
         let mut args = Vec::<String>::with_capacity(2);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("--input"));
 
         let mut cli_args = CLIArgs::new();
@@ -208,7 +208,7 @@ mod tests
     {
         let file = String::from("myfile.json");
         let mut args = Vec::<String>::with_capacity(3);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("--input"));
         args.push(file.clone());
 
@@ -224,7 +224,7 @@ mod tests
     {
         let file = String::from("myfile.json");
         let mut args = Vec::<String>::with_capacity(3);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("-i"));
         args.push(file.clone());
 
@@ -239,7 +239,7 @@ mod tests
     fn parse_two_input_expect_input_arg_value_valid3()
     {
         let mut args = Vec::<String>::with_capacity(3);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("--log-level"));
         args.push(String::from("DEBUG"));
 
@@ -253,7 +253,7 @@ mod tests
     fn parse_two_input_expect_input_arg_value_mixed_case_valid4()
     {
         let mut args = Vec::<String>::with_capacity(3);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("--log-level"));
         args.push(String::from("DeBuG"));
 
@@ -267,7 +267,7 @@ mod tests
     fn parse_two_input_expect_input_arg_value_mixed_case_valid5()
     {
         let mut args = Vec::<String>::with_capacity(3);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("-l"));
         args.push(String::from("DeBuG"));
 
@@ -282,7 +282,7 @@ mod tests
     {
         let file = String::from("myfile.json");
         let mut args = Vec::<String>::with_capacity(8);
-        args.push(String::from("rson"));
+        args.push(String::from("ruson"));
         args.push(String::from("--log-level"));
         args.push(String::from("DEBUG"));
         args.push(String::from("--input"));

@@ -15,7 +15,7 @@ use std::io::{BufWriter, Write};
 use std::io::Stdout;
 use std::rc::Rc;
 
-pub struct RsonWriter
+pub struct RusonWriter
 {
     writer: Option<BufWriter<File>>,
     stdout: Option<BufWriter<Stdout>>,
@@ -24,13 +24,13 @@ pub struct RsonWriter
     pub builder: RefCell<StringBuilder>,
 }
 
-impl RsonWriter
+impl RusonWriter
 {
     #[allow(dead_code)]
     pub fn new_file(path: &String, indent: u32) -> std::io::Result<Self>
     {
         let file_opt = BufWriter::new(OpenOptions::new().write(true).create(true).open(&path)?);
-        let writer = RsonWriter
+        let writer = RusonWriter
            {
                writer: Some(file_opt), stdout: None,
                indent, cur_indent: Cell::new(0),
@@ -45,7 +45,7 @@ impl RsonWriter
     {
         let handle = std::io::stdout();
         let file_opt = BufWriter::new(handle);
-        let writer = RsonWriter
+        let writer = RusonWriter
            {
                writer: None, stdout: Some(file_opt),
                indent, cur_indent: Cell::new(0),
@@ -157,7 +157,7 @@ impl RsonWriter
     }
 }
 
-impl Visitor for RsonWriter
+impl Visitor for RusonWriter
 {
     fn visit_array(&self, node: &RNodeArray)
     {
@@ -296,7 +296,7 @@ mod tests
     use crate::rnodes::rnode_bool::RNodeBool;
     use crate::rnodes::rnode_double::RNodeDouble;
     use crate::rnodes::rnode_string::RNodeString;
-    use super::RsonWriter;
+    use super::RusonWriter;
 
     use std::rc::Rc;
 
@@ -306,7 +306,7 @@ mod tests
     fn create_writer()
     {
         let path = String::from("test.json");
-        let writer_result = RsonWriter::new_file(&path, DEFAULT_INDENT);
+        let writer_result = RusonWriter::new_file(&path, DEFAULT_INDENT);
         assert!(writer_result.is_ok());
 
         let writer = writer_result.unwrap();
@@ -319,7 +319,7 @@ mod tests
     #[test]
     fn increment_decrement_indent()
     {
-        let writer_result = RsonWriter::new_stdout(DEFAULT_INDENT);
+        let writer_result = RusonWriter::new_stdout(DEFAULT_INDENT);
         assert!(writer_result.is_ok());
 
         let writer = writer_result.unwrap();
@@ -336,7 +336,7 @@ mod tests
     #[test]
     fn write_array()
     {
-        let writer_result = RsonWriter::new_stdout(DEFAULT_INDENT);
+        let writer_result = RusonWriter::new_stdout(DEFAULT_INDENT);
         assert!(writer_result.is_ok());
 
         let mut vec: Vec<Rc<dyn RNode>> = Vec::new();
@@ -356,7 +356,7 @@ mod tests
     #[test]
     fn write_bool()
     {
-        let writer_result = RsonWriter::new_stdout(DEFAULT_INDENT);
+        let writer_result = RusonWriter::new_stdout(DEFAULT_INDENT);
         assert!(writer_result.is_ok());
 
         let node_bool = Rc::new(RNodeBool::new(true));
@@ -371,7 +371,7 @@ mod tests
     #[test]
     fn write_double()
     {
-        let writer_result = RsonWriter::new_stdout(DEFAULT_INDENT);
+        let writer_result = RusonWriter::new_stdout(DEFAULT_INDENT);
         assert!(writer_result.is_ok());
 
         let node_double = Rc::new(RNodeDouble::new(123.45E10));
