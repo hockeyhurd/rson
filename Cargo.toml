@@ -3,6 +3,7 @@ name = "ruson"
 version = "0.1.0"
 edition = "2021"
 authors = ["hockeyhurd nhurd96@gmail.com"]
+license-file = "LICENSE"
 
 [dependencies]
 chrono = "0.4"
