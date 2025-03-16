@@ -1,8 +1,7 @@
+use chrono;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ptr::addr_of;
 use std::sync::Mutex;
-use chrono;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum EnumLogLevel
@@ -50,35 +49,24 @@ impl EnumLogLevel
 
 pub fn get_log_level_from_string(string: &String) -> Result<EnumLogLevel, String>
 {
-    let string_upper = string.to_uppercase();
-    static mut LOOKUP_TABLE: Option<HashMap<String, EnumLogLevel>> = None;
-
-    unsafe
+    static LOOKUP_TABLE: std::sync::LazyLock<HashMap::<String, EnumLogLevel>> = std::sync::LazyLock::new(||
     {
-        if LOOKUP_TABLE.is_none()
-        {
-            let mut table = HashMap::<String, EnumLogLevel>::new();
-            table.insert(String::from("DEBUG"), EnumLogLevel::DEBUG);
-            table.insert(String::from("ERROR"), EnumLogLevel::ERROR);
-            table.insert(String::from("FATAL"), EnumLogLevel::FATAL);
-            table.insert(String::from("INFO"), EnumLogLevel::INFO);
-            table.insert(String::from("WARN"), EnumLogLevel::WARN);
+        let mut table = HashMap::<String, EnumLogLevel>::new();
+        table.insert(String::from("DEBUG"), EnumLogLevel::DEBUG);
+        table.insert(String::from("ERROR"), EnumLogLevel::ERROR);
+        table.insert(String::from("FATAL"), EnumLogLevel::FATAL);
+        table.insert(String::from("INFO"), EnumLogLevel::INFO);
+        table.insert(String::from("WARN"), EnumLogLevel::WARN);
 
-            LOOKUP_TABLE = Some(table);
-        }
+        return table;
+    });
 
-        let table_ptr = addr_of!(LOOKUP_TABLE);
-        let opt_table = table_ptr.as_ref().unwrap();
+    let string_upper = string.to_uppercase();
+    let opt_result = LOOKUP_TABLE.get(&string_upper);
 
-        if let Some(table) = opt_table
-        {
-            let result = table.get(&string_upper);
-
-            if result.is_some()
-            {
-                return Ok(*result.unwrap());
-            }
-        }
+    if let Some(result) = opt_result
+    {
+        return Ok(*result);
     }
 
     return Err(String::from("String is not a EnumLogLevel"));
